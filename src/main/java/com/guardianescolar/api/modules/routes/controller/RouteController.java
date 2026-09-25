@@ -32,6 +32,12 @@ public class RouteController {
         return routeService.list();
     }
 
+    @GetMapping("/{routeId}/geometry")
+    @PreAuthorize("hasAuthority('ROUTE_READ') or hasRole('ADMIN')")
+    public RouteDtos.RouteGeometryResponse geometry(@PathVariable UUID routeId) {
+        return routeService.geometry(routeId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('ROUTE_CREATE') or hasRole('ADMIN')")

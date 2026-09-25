@@ -44,6 +44,12 @@ public final class RouteDtos {
             List<StopResponse> stops) {
     }
 
+    public record RouteGeometryResponse(
+            String encodedPolyline,
+            Integer distanceMeters,
+            Long estimatedDurationSeconds) {
+    }
+
     public record StopResponse(
             UUID id,
             Integer stopOrder,
