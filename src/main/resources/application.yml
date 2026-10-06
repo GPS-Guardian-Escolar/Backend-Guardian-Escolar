@@ -62,6 +62,33 @@ guardian:
     api-key: ${SMS_API_KEY:}
     from: ${SMS_FROM:GuardianEscolar}
 
+google:
+  maps:
+    api-key-server: ${GOOGLE_MAPS_API_KEY_SERVER:}
+    api-key-android: ${GOOGLE_MAPS_API_KEY_ANDROID:}
+    api-key-ios: ${GOOGLE_MAPS_API_KEY_IOS:}
+    api-key-browser: ${GOOGLE_MAPS_API_KEY_BROWSER:}
+    base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
+    connect-timeout-millis: ${GOOGLE_MAPS_CONNECT_TIMEOUT_MILLIS:2000}
+    read-timeout-millis: ${GOOGLE_MAPS_READ_TIMEOUT_MILLIS:5000}
+    cache:
+      geocoding-ttl: ${GOOGLE_MAPS_GEOCODING_CACHE_TTL:48h}
+      directions-ttl: ${GOOGLE_MAPS_DIRECTIONS_CACHE_TTL:10m}
+      maximum-size: ${GOOGLE_MAPS_CACHE_MAXIMUM_SIZE:10000}
+    resilience:
+      retry-attempts: ${GOOGLE_MAPS_RETRY_ATTEMPTS:3}
+      retry-wait: ${GOOGLE_MAPS_RETRY_WAIT:500ms}
+      circuit-breaker-failure-rate-threshold: ${GOOGLE_MAPS_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50}
+      circuit-breaker-sliding-window-size: ${GOOGLE_MAPS_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:20}
+    rate-limit:
+      permits-per-minute: ${GOOGLE_MAPS_RATE_LIMIT_PER_MINUTE:60}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
 logging:
   level:
     org.springframework.security: INFO
