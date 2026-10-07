@@ -35,3 +35,35 @@ Tests run: 3
 Failures: 0
 BUILD SUCCESS
 ```
+
+## Google Maps Platform
+
+El backend expone `/api/maps/**` como proxy autenticado para Google Maps. La clave debe vivir solo en variables de entorno o en `.env`; nunca debe escribirse en codigo Java ni devolverse al frontend.
+
+Configura la variable antes de iniciar la aplicacion:
+
+```bash
+GOOGLE_MAPS_API_KEY=<tu_google_maps_api_key>
+```
+
+Ejemplo geocoding:
+
+```http
+POST /api/maps/geocode
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{ "address": "SENA Bogota" }
+```
+
+Ejemplo reverse geocoding:
+
+```http
+POST /api/maps/reverse-geocode
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{ "latitude": 4.6486, "longitude": -74.1006 }
+```
+
+Los endpoints requieren JWT y no exponen la API key al cliente.

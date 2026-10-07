@@ -64,10 +64,7 @@ guardian:
 
 google:
   maps:
-    api-key-server: ${GOOGLE_MAPS_API_KEY_SERVER:}
-    api-key-android: ${GOOGLE_MAPS_API_KEY_ANDROID:}
-    api-key-ios: ${GOOGLE_MAPS_API_KEY_IOS:}
-    api-key-browser: ${GOOGLE_MAPS_API_KEY_BROWSER:}
+    api-key: ${GOOGLE_MAPS_API_KEY:}
     base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
     connect-timeout-millis: ${GOOGLE_MAPS_CONNECT_TIMEOUT_MILLIS:2000}
     read-timeout-millis: ${GOOGLE_MAPS_READ_TIMEOUT_MILLIS:5000}

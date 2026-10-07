@@ -1,6 +1,5 @@
 package com.guardianescolar.api.modules.maps.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -82,8 +81,4 @@ public final class MapsDtos {
             List<String> types) {
     }
 
-    public record GooglePayload(
-            String status,
-            JsonNode payload) {
-    }
 }

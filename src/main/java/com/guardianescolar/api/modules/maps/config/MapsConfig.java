@@ -1,10 +1,10 @@
 package com.guardianescolar.api.modules.maps.config;
 
+import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
-import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

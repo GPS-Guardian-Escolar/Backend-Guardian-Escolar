@@ -1,4 +1,21 @@
-# Módulo maps
+# Modulo maps
+
+Este modulo actua como proxy seguro entre los clientes y Google Maps. La llave se usa unicamente en backend mediante `GOOGLE_MAPS_API_KEY`; no debe hardcodearse ni enviarse al frontend.
+
+## Configuracion
+
+```bash
+GOOGLE_MAPS_API_KEY=<tu_google_maps_api_key>
+```
+
+## Endpoints
+
+- `POST /api/maps/geocode` con `{ "address": "SENA Bogota" }`.
+- `POST /api/maps/reverse-geocode` con `{ "latitude": 4.6486, "longitude": -74.1006 }`.
+- `POST /api/maps/directions` con origen y destino por direccion o coordenadas.
+- `GET /api/maps/places/autocomplete?input=colegio`.
+
+Todos requieren JWT y autoridad `LOCATION_VIEW` o rol `ADMIN`.
 
 Este módulo actúa como proxy seguro entre los clientes y Google Maps. La llave de servidor se usa únicamente en backend y debe estar restringida por IP en Google Cloud Console.
 

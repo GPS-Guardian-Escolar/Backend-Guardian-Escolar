@@ -9,10 +9,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "google.maps")
 public record GoogleMapsProperties(
-        String apiKeyServer,
-        String apiKeyAndroid,
-        String apiKeyIos,
-        String apiKeyBrowser,
+        String apiKey,
         @NotBlank String baseUrl,
         @Positive int connectTimeoutMillis,
         @Positive int readTimeoutMillis,

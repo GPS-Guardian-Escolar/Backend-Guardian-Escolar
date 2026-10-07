@@ -44,7 +44,7 @@ public class GoogleMapsClient {
     }
 
     public JsonNode get(String endpoint, String uriTemplate, Object... uriVariables) {
-        if (!StringUtils.hasText(properties.apiKeyServer())) {
+        if (!StringUtils.hasText(properties.apiKey())) {
             metricsService.recordError("MISSING_API_KEY");
             throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "MISSING_API_KEY",
                     "La llave de servidor de Google Maps no está configurada", Duration.ofMinutes(5));
@@ -86,7 +86,7 @@ public class GoogleMapsClient {
     private Object[] appendKey(Object[] uriVariables) {
         Object[] values = new Object[uriVariables.length + 1];
         System.arraycopy(uriVariables, 0, values, 0, uriVariables.length);
-        values[uriVariables.length] = properties.apiKeyServer();
+        values[uriVariables.length] = properties.apiKey();
         return values;
     }
 
