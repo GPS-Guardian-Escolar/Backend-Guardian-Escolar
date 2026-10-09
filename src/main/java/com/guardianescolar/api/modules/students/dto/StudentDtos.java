@@ -22,7 +22,8 @@ public final class StudentDtos {
             UUID userId,
             @NotBlank @Size(min = 2, max = 100) String fullName,
             @NotNull SchoolGrade schoolGrade,
-            @NotNull @Past LocalDate birthDate) {
+            @NotNull @Past LocalDate birthDate,
+            @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData) {
     }
 
     public record StudentResponse(
@@ -33,6 +34,7 @@ public final class StudentDtos {
             String fullName,
             SchoolGrade schoolGrade,
             LocalDate birthDate,
+            String photoData,
             Boolean isActive,
             Long linkedDevices,
             Long linkedGuardians,
@@ -56,7 +58,7 @@ public final class StudentDtos {
     }
 
     public record LinkDeviceRequest(
-            @NotNull UUID studentId,
+            UUID studentId,
             @NotBlank @Size(min = 6, max = 20) String code,
             @NotBlank @Size(min = 8, max = 160) String deviceIdentifier,
             @NotBlank @Pattern(regexp = "ANDROID|IOS|WEB", message = "platform debe ser ANDROID, IOS o WEB") String platform,

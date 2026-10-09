@@ -38,6 +38,7 @@ public class StudentMapper {
                 student.getFullName(),
                 student.getSchoolGrade(),
                 student.getBirthDate(),
+                student.getPhotoData(),
                 student.getIsActive(),
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()),
                 1 + studentGuardianRepository.countByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), STATUS_ACTIVE),

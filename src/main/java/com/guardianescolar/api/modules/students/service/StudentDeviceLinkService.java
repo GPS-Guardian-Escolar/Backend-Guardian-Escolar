@@ -24,7 +24,9 @@ public class StudentDeviceLinkService {
     private final StudentLinkCodeService studentLinkCodeService;
 
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
-        Student student = findStudent(request.studentId());
+        Student student = request.studentId() == null
+                ? findStudentByCode(request.code())
+                : findStudent(request.studentId());
         if (!studentLinkCodeService.matches(student.getId(), request.code())) {
             throw new IllegalArgumentException("Invalid link code");
         }
@@ -94,6 +96,13 @@ public class StudentDeviceLinkService {
     private Student findStudent(java.util.UUID studentId) {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
+
+    private Student findStudentByCode(String code) {
+        return studentRepository.findByDeletedAtIsNullOrderByFullNameAsc().stream()
+                .filter(candidate -> studentLinkCodeService.matches(candidate.getId(), code))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for link code"));
     }
 
     private String normalizeOptionalText(String value) {
