@@ -43,13 +43,13 @@ public class NotificationDeliveryService {
 
     private String title(String eventType) {
         return switch (eventType) {
-            case NotificationEventTypes.ROUTE_DEVIATION -> "Route deviation";
-            case NotificationEventTypes.SAFE_ZONE_ENTRY -> "Safe zone entry";
-            case NotificationEventTypes.SAFE_ZONE_EXIT -> "Safe zone exit";
-            case NotificationEventTypes.TRIP_STARTED -> "Trip started";
-            case NotificationEventTypes.DELAY -> "Trip delay";
-            case NotificationEventTypes.INACTIVITY -> "Inactivity detected";
-            default -> "Guardian Escolar notification";
+            case NotificationEventTypes.ROUTE_DEVIATION -> "Desvío de ruta";
+            case NotificationEventTypes.SAFE_ZONE_ENTRY -> "Entrada a zona segura";
+            case NotificationEventTypes.SAFE_ZONE_EXIT -> "Salida de zona segura";
+            case NotificationEventTypes.TRIP_STARTED -> "Trayecto iniciado";
+            case NotificationEventTypes.DELAY -> "Retraso del trayecto";
+            case NotificationEventTypes.INACTIVITY -> "Inactividad detectada";
+            default -> "Notificación de Guardian Escolar";
         };
     }
 

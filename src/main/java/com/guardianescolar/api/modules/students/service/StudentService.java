@@ -8,6 +8,7 @@ import com.guardianescolar.api.modules.routes.repository.StudentRouteRepository;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.domain.SchoolGrade;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
 import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
@@ -82,6 +83,7 @@ public class StudentService {
         student.setDeletedAt(OffsetDateTime.now());
         student.setUpdatedBy(current);
         studentRepository.save(student);
+        unlinkActiveDevices(studentId);
     }
 
     @Transactional(readOnly = true)
@@ -113,13 +115,8 @@ public class StudentService {
 
     @Transactional
     public void unlinkDevice(UUID studentId) {
-        Student student = getManageable(studentId);
-        studentDeviceRepository.findFirstByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId)
-                .ifPresent(device -> {
-                    device.setIsActive(false);
-                    device.setDeletedAt(OffsetDateTime.now());
-                    studentDeviceRepository.save(device);
-                });
+        getManageable(studentId);
+        unlinkActiveDevices(studentId);
     }
 
     @Transactional
@@ -148,7 +145,7 @@ public class StudentService {
     }
 
     private void applyData(Student student, StudentDtos.StudentRequest request) {
-        validateBirthDate(request.birthDate());
+        validateBirthDate(request.birthDate(), request.schoolGrade());
         student.setFullName(request.fullName().trim());
         student.setSchoolGrade(request.schoolGrade());
         student.setBirthDate(request.birthDate());
@@ -157,7 +154,7 @@ public class StudentService {
         }
     }
 
-    private void validateBirthDate(LocalDate birthDate) {
+    private void validateBirthDate(LocalDate birthDate, SchoolGrade schoolGrade) {
         if (birthDate == null) {
             throw new IllegalArgumentException("Birth date is required");
         }
@@ -166,6 +163,43 @@ public class StudentService {
             throw new IllegalArgumentException(
                     "The student's age must be between " + MIN_STUDENT_AGE + " and " + MAX_STUDENT_AGE + " years");
         }
+        int[] range = ageRangeForSchoolGrade(schoolGrade);
+        if (age < range[0] || age > range[1]) {
+            throw new IllegalArgumentException("The student's age does not match the selected school grade");
+        }
+    }
+
+    private void unlinkActiveDevices(UUID studentId) {
+        List<com.guardianescolar.api.modules.students.domain.StudentDevice> devices =
+                studentDeviceRepository.findByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId);
+        if (devices.isEmpty()) {
+            return;
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        devices.forEach(device -> {
+            device.setIsActive(false);
+            device.setDeletedAt(now);
+        });
+        studentDeviceRepository.saveAll(devices);
+    }
+
+    private int[] ageRangeForSchoolGrade(SchoolGrade grade) {
+        return switch (grade) {
+            case PRE_KINDER -> new int[] { 3, 5 };
+            case KINDER -> new int[] { 4, 6 };
+            case TRANSITION -> new int[] { 5, 7 };
+            case FIRST -> new int[] { 6, 8 };
+            case SECOND -> new int[] { 7, 9 };
+            case THIRD -> new int[] { 8, 10 };
+            case FOURTH -> new int[] { 9, 11 };
+            case FIFTH -> new int[] { 10, 12 };
+            case SIXTH -> new int[] { 11, 13 };
+            case SEVENTH -> new int[] { 12, 14 };
+            case EIGHTH -> new int[] { 13, 15 };
+            case NINTH -> new int[] { 14, 16 };
+            case TENTH -> new int[] { 15, 17 };
+            case ELEVENTH -> new int[] { 16, 21 };
+        };
     }
 
     private User resolveOwner(UUID userId, User current) {

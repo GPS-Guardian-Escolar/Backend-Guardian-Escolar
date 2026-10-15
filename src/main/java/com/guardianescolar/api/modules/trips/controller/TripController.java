@@ -33,7 +33,7 @@ public class TripController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
     public TripDtos.TripResponse create(@Valid @RequestBody TripDtos.TripRequest request) {
         return tripService.create(request);
     }
@@ -48,7 +48,7 @@ public class TripController {
 
     @PostMapping("/{tripId}/coordinates")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
     public TripDtos.CoordinateResponse registerCoordinate(
             @PathVariable UUID tripId,
             @Valid @RequestBody TripDtos.CoordinateRequest request) {

@@ -2,6 +2,8 @@ package com.guardianescolar.api.modules.zones.service;
 
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.domain.StudentGuardian;
+import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
@@ -10,6 +12,8 @@ import com.guardianescolar.api.modules.zones.repository.SafeZoneRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,17 +24,36 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SafeZoneService {
 
+    private static final List<String> VALID_ZONE_TYPES = List.of("Casa", "Escuela", "Personalizado");
+
     private final SafeZoneRepository safeZoneRepository;
     private final StudentService studentService;
     private final CurrentUserService currentUserService;
+    private final StudentGuardianRepository studentGuardianRepository;
 
     @Transactional(readOnly = true)
     public List<SafeZoneDtos.SafeZoneResponse> list() {
         User current = currentUserService.currentUser();
-        List<SafeZone> zones = currentUserService.isAdmin(current)
-                ? safeZoneRepository.findByIsActiveTrueAndDeletedAtIsNullOrderByZoneNameAsc()
-                : safeZoneRepository.findByStudentUserEmailIgnoreCaseAndIsActiveTrueAndDeletedAtIsNullOrderByZoneNameAsc(current.getEmail());
-        return zones.stream().map(this::toResponse).toList();
+        if (currentUserService.isAdmin(current)) {
+            return safeZoneRepository.findByIsActiveTrueAndDeletedAtIsNullOrderByZoneNameAsc()
+                    .stream().map(this::toResponse).toList();
+        }
+
+        Map<java.util.UUID, SafeZone> visibleZones = new LinkedHashMap<>();
+        safeZoneRepository.findByStudentUserEmailIgnoreCaseAndIsActiveTrueAndDeletedAtIsNullOrderByZoneNameAsc(current.getEmail())
+                .forEach(zone -> visibleZones.put(zone.getId(), zone));
+
+        studentGuardianRepository.findByUserIdAndStatusAndDeletedAtIsNull(current.getId(), "ACTIVE")
+                .stream()
+                .map(StudentGuardian::getStudent)
+                .filter(student -> student.getDeletedAt() == null)
+                .forEach(student -> safeZoneRepository.findByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId())
+                        .forEach(zone -> visibleZones.put(zone.getId(), zone)));
+
+        return visibleZones.values().stream()
+                .sorted(java.util.Comparator.comparing(SafeZone::getZoneName, String.CASE_INSENSITIVE_ORDER))
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -77,6 +100,9 @@ public class SafeZoneService {
     private void applyData(SafeZone zone, SafeZoneDtos.SafeZoneRequest request, Student student) {
         zone.setStudent(student);
         zone.setZoneName(request.zoneName().trim());
+        zone.setZoneType(VALID_ZONE_TYPES.contains(request.zoneType()) ? request.zoneType() : "Personalizado");
+        zone.setColor(request.color() == null || request.color().isBlank() ? defaultColor(zone.getZoneType()) : request.color().trim());
+        zone.setAddress(request.address().trim());
         zone.setLatitude(request.latitude());
         zone.setLongitude(request.longitude());
         zone.setRadiusMeters(request.radiusMeters());
@@ -90,10 +116,21 @@ public class SafeZoneService {
                 zone.getStudent().getId(),
                 zone.getStudent().getFullName(),
                 zone.getZoneName(),
+                zone.getZoneType(),
+                zone.getColor(),
+                zone.getAddress(),
                 zone.getLatitude(),
                 zone.getLongitude(),
                 zone.getRadiusMeters(),
                 zone.getInactivityAlertSeconds(),
                 zone.getIsActive());
+    }
+
+    private String defaultColor(String zoneType) {
+        return switch (zoneType) {
+            case "Casa" -> "#84CC16";
+            case "Escuela" -> "#60A5FA";
+            default -> "#EF4444";
+        };
     }
 }
