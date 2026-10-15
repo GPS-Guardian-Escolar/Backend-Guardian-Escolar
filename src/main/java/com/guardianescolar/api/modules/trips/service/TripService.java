@@ -22,6 +22,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,8 +52,15 @@ public class TripService {
 
     @Transactional
     public TripDtos.TripResponse create(TripDtos.TripRequest request) {
+        validateChildStudent(request.studentId());
         Student student = studentService.getAllowed(request.studentId());
-        Route route = routeService.getAllowed(request.routeId());
+        Route route = request.routeId() == null
+                ? studentRouteRepository.findByIdStudentIdAndIsActiveTrue(request.studentId()).stream()
+                        .map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
+                        .filter(candidate -> candidate.getDeletedAt() == null)
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("The student has no active route assigned"))
+                : routeService.getAllowed(request.routeId());
         if (!studentRouteRepository.existsByIdStudentIdAndIdRouteIdAndIsActiveTrue(student.getId(), route.getId())) {
             throw new IllegalArgumentException("The student does not have the requested route assigned");
         }
@@ -115,10 +123,19 @@ public class TripService {
         Trip trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
         User current = currentUserService.currentUser();
+        validateChildStudent(trip.getStudent().getId());
         boolean owner = trip.getStudent().getUser().getId().equals(current.getId());
         if (!currentUserService.isAdmin(current) && !owner) {
             throw new AccessDeniedException("You do not have access to this trip");
         }
         return trip;
+    }
+
+    private void validateChildStudent(UUID studentId) {
+        Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
+        if (details instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails child
+                && !child.studentId().equals(studentId)) {
+            throw new AccessDeniedException("The device is not linked to this student");
+        }
     }
 }

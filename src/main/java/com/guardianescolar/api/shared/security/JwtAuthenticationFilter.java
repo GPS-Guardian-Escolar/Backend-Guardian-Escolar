@@ -44,11 +44,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         && userDetails.isAccountNonExpired()
                         && userDetails.isCredentialsNonExpired()
                         && jwtService.isTokenValid(token, userDetails)) {
+                    boolean childToken = jwtService.isChildToken(token);
+                    var authorities = childToken
+                            ? java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("CHILD_DEVICE"))
+                            : userDetails.getAuthorities();
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
-                            userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            authorities);
+                    authentication.setDetails(childToken
+                            ? new ChildDeviceAuthenticationDetails(jwtService.childStudentId(token), jwtService.childDeviceIdentifier(token))
+                            : new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }

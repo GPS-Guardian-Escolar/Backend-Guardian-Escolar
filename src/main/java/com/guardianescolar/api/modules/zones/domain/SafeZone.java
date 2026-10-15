@@ -37,6 +37,12 @@ public class SafeZone {
     @Column(name = "zone_name", nullable = false, length = 100)
     private String zoneName;
 
+    @Column(name = "zone_type", nullable = false, length = 20)
+    private String zoneType = "Personalizado";
+
+@Column(name = "address", length = 160)
+    private String address;
+
     @Column(name = "latitude", nullable = false, precision = 9, scale = 6)
     private BigDecimal latitude;
 

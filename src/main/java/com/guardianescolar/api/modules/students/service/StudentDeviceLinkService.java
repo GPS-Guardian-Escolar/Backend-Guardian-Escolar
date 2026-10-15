@@ -8,6 +8,7 @@ import com.guardianescolar.api.modules.students.repository.EmergencyContactRepos
 import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.security.JwtService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class StudentDeviceLinkService {
     private final EmergencyContactRepository emergencyContactRepository;
     private final StudentMapper studentMapper;
     private final StudentLinkCodeService studentLinkCodeService;
+    private final JwtService jwtService;
 
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
         Student student = request.studentId() == null
@@ -44,7 +46,10 @@ public class StudentDeviceLinkService {
         }
         device.setLastUsedAt(now);
         device.setDeletedAt(null);
-        return studentMapper.toDeviceResponse(studentDeviceRepository.save(device));
+        StudentDevice saved = studentDeviceRepository.save(device);
+        String childToken = jwtService.generateChildToken(
+                student.getUser(), student.getId(), saved.getDeviceIdentifier());
+        return studentMapper.toDeviceResponse(saved, childToken);
     }
 
     public StudentDtos.LinkedProfileResponse linkedProfile(java.util.UUID studentId, String code) {
@@ -62,7 +67,8 @@ public class StudentDeviceLinkService {
                 student.getBirthDate(),
                 contact == null ? "" : contact.getFullName(),
                 contact == null ? "" : contact.getPhone(),
-                contact == null ? "" : contact.getRelationship());
+                contact == null ? "" : contact.getRelationship(),
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId));
     }
 
     private StudentDevice resolveLinkableDevice(Student student, String deviceIdentifier) {
@@ -75,10 +81,15 @@ public class StudentDeviceLinkService {
 
         StudentDevice device = studentDeviceRepository.findByDeviceIdentifier(deviceIdentifier)
                 .orElseGet(StudentDevice::new);
+        boolean previousStudentStillActive = device.getStudent() != null
+                && Boolean.TRUE.equals(device.getStudent().getIsActive())
+                && device.getStudent().getDeletedAt() == null;
         if (device.getId() != null
+                && device.getStudent() != null
                 && !device.getStudent().getId().equals(student.getId())
                 && Boolean.TRUE.equals(device.getIsActive())
-                && device.getDeletedAt() == null) {
+                && device.getDeletedAt() == null
+                && previousStudentStillActive) {
             throw new IllegalArgumentException("This phone is already linked to another student");
         }
         return device;
@@ -112,3 +123,5 @@ public class StudentDeviceLinkService {
         return value.trim();
     }
 }
+
+

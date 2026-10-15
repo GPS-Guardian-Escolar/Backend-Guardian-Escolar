@@ -53,6 +53,34 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateChildToken(User owner, UUID studentId, String deviceIdentifier) {
+        Instant now = Instant.now();
+        Map<String, Object> claims = Map.of(
+                "tokenType", "CHILD_DEVICE",
+                "studentId", studentId.toString(),
+                "deviceIdentifier", deviceIdentifier);
+        return Jwts.builder()
+                .claims(claims)
+                .subject(owner.getEmail())
+                .id(UUID.randomUUID().toString())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(expirationMinutes, ChronoUnit.MINUTES)))
+                .signWith(signingKey())
+                .compact();
+    }
+
+    public boolean isChildToken(String token) {
+        return "CHILD_DEVICE".equals(claims(token).get("tokenType", String.class));
+    }
+
+    public UUID childStudentId(String token) {
+        return UUID.fromString(claims(token).get("studentId", String.class));
+    }
+
+    public String childDeviceIdentifier(String token) {
+        return claims(token).get("deviceIdentifier", String.class);
+    }
+
     public String extractUsername(String token) {
         return claims(token).getSubject();
     }

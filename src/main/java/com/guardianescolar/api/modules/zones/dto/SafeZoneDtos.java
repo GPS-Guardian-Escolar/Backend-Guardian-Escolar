@@ -18,9 +18,11 @@ public final class SafeZoneDtos {
     public record SafeZoneRequest(
             @NotNull UUID studentId,
             @NotBlank @Size(min = 2, max = 100) String zoneName,
+            @Size(max = 20) String zoneType,
+            @NotBlank @Size(min = 5, max = 160) String address,
             @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
             @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
-            @NotNull @Min(10) @Max(50000) Integer radiusMeters,
+            @NotNull @Min(5) @Max(50000) Integer radiusMeters,
             @Min(1) @Max(86400) Integer inactivityAlertSeconds) {
     }
 
@@ -29,6 +31,8 @@ public final class SafeZoneDtos {
             UUID studentId,
             String studentName,
             String zoneName,
+            String zoneType,
+            String address,
             BigDecimal latitude,
             BigDecimal longitude,
             Integer radiusMeters,
