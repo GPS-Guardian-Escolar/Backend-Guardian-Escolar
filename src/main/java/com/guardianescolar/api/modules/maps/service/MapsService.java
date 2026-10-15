@@ -80,11 +80,8 @@ public class MapsService {
         return cacheService.getDirections(cacheKey)
                 .map(payload -> readDirections(payload, true))
                 .orElseGet(() -> {
-                    JsonNode payload = googleMapsClient.get("directions",
-                            "/directions/json?origin={origin}&destination={destination}&mode={mode}&departure_time={departureTime}&language={language}",
-                            locationValue(request.origin()), locationValue(request.destination()),
-                            defaultMode(request.mode()), departureTime(request.departureTime()),
-                            defaultText(request.language()));
+                    JsonNode payload = googleMapsClient.computeRoute(
+                            request.origin(), request.destination(), defaultMode(request.mode()), request.language());
                     cacheService.putDirections(cacheKey, write(payload));
                     return toDirectionsResponse(payload, false);
                 });
@@ -140,19 +137,35 @@ public class MapsService {
             int distanceMeters = 0;
             int durationSeconds = 0;
             int durationInTrafficSeconds = 0;
-            for (JsonNode leg : route.path("legs")) {
-                distanceMeters += leg.path("distance").path("value").asInt(0);
-                durationSeconds += leg.path("duration").path("value").asInt(0);
-                durationInTrafficSeconds += leg.path("duration_in_traffic").path("value").asInt(0);
+            if (route.has("legs")) {
+                for (JsonNode leg : route.path("legs")) {
+                    distanceMeters += leg.path("distance").path("value").asInt(0);
+                    durationSeconds += leg.path("duration").path("value").asInt(0);
+                    durationInTrafficSeconds += leg.path("duration_in_traffic").path("value").asInt(0);
+                }
+            } else {
+                distanceMeters = route.path("distanceMeters").asInt(0);
+                durationSeconds = parseDurationSeconds(route.path("duration").asText("0s"));
             }
+            String polyline = route.has("polyline")
+                    ? route.path("polyline").path("encodedPolyline").asText(null)
+                    : route.path("overview_polyline").path("points").asText(null);
             routes.add(new DirectionRoute(
-                    route.path("summary").asText(null),
+                    route.has("description") ? route.path("description").asText(null) : route.path("summary").asText(null),
                     distanceMeters,
                     durationSeconds,
                     durationInTrafficSeconds == 0 ? null : durationInTrafficSeconds,
-                    route.path("overview_polyline").path("points").asText(null)));
+                    polyline));
         });
         return new DirectionsResponse(payload.path("status").asText(), cached, routes);
+    }
+
+    private int parseDurationSeconds(String duration) {
+        try {
+            return (int) Double.parseDouble(duration.replace("s", ""));
+        } catch (NumberFormatException exception) {
+            return 0;
+        }
     }
 
     private PlaceAutocompleteResponse toAutocompleteResponse(JsonNode payload, boolean cached) {

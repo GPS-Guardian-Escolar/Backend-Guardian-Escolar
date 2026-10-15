@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import com.guardianescolar.api.modules.maps.dto.MapsDtos.LocationInput;
 
 @Service
 public class GoogleMapsClient {
@@ -22,6 +23,7 @@ public class GoogleMapsClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoogleMapsClient.class);
 
     private final RestClient restClient;
+    private final RestClient routesRestClient;
     private final GoogleMapsProperties properties;
     private final ObjectMapper objectMapper;
     private final Retry retry;
@@ -30,12 +32,14 @@ public class GoogleMapsClient {
 
     public GoogleMapsClient(
             RestClient googleMapsRestClient,
+            RestClient googleRoutesRestClient,
             GoogleMapsProperties properties,
             ObjectMapper objectMapper,
             Retry googleMapsRetry,
             CircuitBreaker googleMapsCircuitBreaker,
             MapsMetricsService metricsService) {
         this.restClient = googleMapsRestClient;
+        this.routesRestClient = googleRoutesRestClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.retry = googleMapsRetry;
@@ -59,6 +63,67 @@ public class GoogleMapsClient {
             LOGGER.info("Google Maps call endpoint={} latencyMs={} quotaUnits=1 cache=miss",
                     endpoint, latency.toMillis());
         }
+    }
+
+    public JsonNode computeRoute(LocationInput origin, LocationInput destination, String mode, String language) {
+        if (!StringUtils.hasText(properties.apiKey())) {
+            metricsService.recordError("MISSING_API_KEY");
+            throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "MISSING_API_KEY",
+                    "La llave de servidor de Google Maps no está configurada", Duration.ofMinutes(5));
+        }
+        Instant startedAt = Instant.now();
+        Supplier<JsonNode> supplier = () -> executeRoute(origin, destination, mode, language);
+        try {
+            return CircuitBreaker.decorateSupplier(circuitBreaker, Retry.decorateSupplier(retry, supplier)).get();
+        } finally {
+            Duration latency = Duration.between(startedAt, Instant.now());
+            metricsService.recordLatency("directions", latency);
+            LOGGER.info("Google Maps call endpoint=routes-v2 latencyMs={} quotaUnits=1 cache=miss",
+                    latency.toMillis());
+        }
+    }
+
+    private JsonNode executeRoute(LocationInput origin, LocationInput destination, String mode, String language) {
+        try {
+            var request = objectMapper.createObjectNode();
+            request.set("origin", routeLocation(origin));
+            request.set("destination", routeLocation(destination));
+            request.put("travelMode", "driving".equalsIgnoreCase(mode) ? "DRIVE" : "DRIVE");
+            request.put("languageCode", StringUtils.hasText(language) ? language : "es");
+            request.put("polylineEncoding", "ENCODED_POLYLINE");
+            String body = routesRestClient.post()
+                    .uri("/directions/v2:computeRoutes")
+                    .header("X-Goog-Api-Key", properties.apiKey())
+                    .header("X-Goog-FieldMask", "routes.distanceMeters,routes.duration,routes.description,routes.polyline.encodedPolyline")
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+            JsonNode payload = objectMapper.readTree(body);
+            if (!payload.path("routes").isArray() || payload.path("routes").isEmpty()) {
+                throw mapGoogleError("ZERO_RESULTS", "Google Routes no encontró un trayecto");
+            }
+            return payload;
+        } catch (MapsApiException exception) {
+            metricsService.recordError(exception.googleStatus());
+            throw exception;
+        } catch (Exception exception) {
+            metricsService.recordError("ROUTES_API_ERROR");
+            throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "ROUTES_API_ERROR",
+                    "No fue posible calcular el trayecto con Google Routes", Duration.ofSeconds(30));
+        }
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode routeLocation(LocationInput input) {
+        var location = objectMapper.createObjectNode();
+        if (input.latitude() != null && input.longitude() != null) {
+            var latLng = objectMapper.createObjectNode();
+            latLng.put("latitude", input.latitude());
+            latLng.put("longitude", input.longitude());
+            location.set("location", objectMapper.createObjectNode().set("latLng", latLng));
+        } else {
+            location.put("address", input.address());
+        }
+        return location;
     }
 
     private JsonNode execute(String endpoint, String uriTemplate, Object... uriVariables) {

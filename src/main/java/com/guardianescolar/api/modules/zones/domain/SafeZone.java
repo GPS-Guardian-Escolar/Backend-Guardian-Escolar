@@ -40,6 +40,9 @@ public class SafeZone {
     @Column(name = "zone_type", nullable = false, length = 20)
     private String zoneType = "Personalizado";
 
+    @Column(name = "color", nullable = false, length = 20)
+    private String color = "#EF4444";
+
 @Column(name = "address", length = 160)
     private String address;
 
