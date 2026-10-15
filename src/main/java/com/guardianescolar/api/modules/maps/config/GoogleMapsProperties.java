@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 public record GoogleMapsProperties(
         String apiKey,
         @NotBlank String baseUrl,
+        @NotBlank String routesBaseUrl,
         @Positive int connectTimeoutMillis,
         @Positive int readTimeoutMillis,
         Cache cache,
