@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SafeZoneService {
 
+    private static final List<String> VALID_ZONE_TYPES = List.of("Casa", "Escuela", "Personalizado");
+
     private final SafeZoneRepository safeZoneRepository;
     private final StudentService studentService;
     private final CurrentUserService currentUserService;
@@ -77,6 +79,8 @@ public class SafeZoneService {
     private void applyData(SafeZone zone, SafeZoneDtos.SafeZoneRequest request, Student student) {
         zone.setStudent(student);
         zone.setZoneName(request.zoneName().trim());
+        zone.setZoneType(VALID_ZONE_TYPES.contains(request.zoneType()) ? request.zoneType() : "Personalizado");
+        zone.setAddress(request.address().trim());
         zone.setLatitude(request.latitude());
         zone.setLongitude(request.longitude());
         zone.setRadiusMeters(request.radiusMeters());
@@ -90,6 +94,8 @@ public class SafeZoneService {
                 zone.getStudent().getId(),
                 zone.getStudent().getFullName(),
                 zone.getZoneName(),
+                zone.getZoneType(),
+                zone.getAddress(),
                 zone.getLatitude(),
                 zone.getLongitude(),
                 zone.getRadiusMeters(),
