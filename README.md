@@ -18,6 +18,7 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - Panel administrativo.
 - Auditoria y registro de errores.
 - Configuracion Spring Boot por perfiles.
+- Correo configurable mediante SMTP de Gmail o API HTTPS de Resend.
 - Dockerfile y docker-compose standalone.
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
@@ -67,3 +68,38 @@ Content-Type: application/json
 ```
 
 Los endpoints requieren JWT y no exponen la API key al cliente.
+
+## Proveedores de correo
+
+El proveedor se selecciona con `MAIL_PROVIDER` y por defecto es `smtp`, por lo que la
+configuracion local existente con Gmail se conserva. Para Docker local:
+
+```env
+APP_MAIL_ENABLED=true
+MAIL_PROVIDER=smtp
+APP_MAIL_FROM=gpsguardianescolar@gmail.com
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=gpsguardianescolar@gmail.com
+MAIL_PASSWORD=<contrasena-de-aplicacion-de-gmail>
+MAIL_SMTP_AUTH=true
+MAIL_SMTP_STARTTLS=true
+```
+
+Para Render Free se puede usar la API HTTPS de Resend, sin exponer una clave SMTP:
+
+```env
+APP_MAIL_ENABLED=true
+MAIL_PROVIDER=resend
+APP_MAIL_FROM=onboarding@resend.dev
+RESEND_API_KEY=<clave-secreta-de-resend>
+```
+
+`RESEND_API_KEY` solo debe configurarse en las variables privadas del servicio. El remitente
+`onboarding@resend.dev` es válido para pruebas con las restricciones de Resend y no debe
+tratarse como un remitente de producción para destinatarios arbitrarios. Para producción se
+debe verificar un dominio en Resend y usar una dirección autorizada en `APP_MAIL_FROM`.
+
+La selección de proveedor conserva los flujos actuales de verificación de correo,
+recuperación de contraseña, confirmación de dispositivo, doble factor y notificaciones. No
+se incluyen claves en el código ni en `.env.example`.
