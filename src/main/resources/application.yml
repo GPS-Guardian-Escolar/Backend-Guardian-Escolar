@@ -47,10 +47,11 @@ guardian:
     enabled: ${APP_MAIL_ENABLED:false}
     provider: ${MAIL_PROVIDER:smtp}
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
+    from-name: ${APP_MAIL_FROM_NAME:}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
-    resend:
-      api-key: ${RESEND_API_KEY:}
-      api-url: ${RESEND_API_URL:https://api.resend.com}
+    brevo:
+      api-key: ${BREVO_API_KEY:}
+      api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
   gps:
     route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
   push:
