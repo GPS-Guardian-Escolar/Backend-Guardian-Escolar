@@ -24,7 +24,7 @@ public class SmtpEmailSender implements EmailSender {
             helper.setText(text, html);
             javaMailSender.send(message);
         } catch (MessagingException error) {
-            throw new IllegalStateException("No se pudo construir el email", error);
+            throw new EmailDeliveryException("smtp", null, "No se pudo enviar el email por SMTP", error);
         }
     }
 }

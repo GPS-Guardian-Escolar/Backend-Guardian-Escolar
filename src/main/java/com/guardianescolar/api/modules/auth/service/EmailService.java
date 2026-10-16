@@ -107,7 +107,7 @@ public class EmailService {
             String url,
             String note) {
         if (!mailEnabled) {
-            LOGGER.info("Email desactivado. Recipient: {}, subject: {}, url: {}", recipient, subject, url);
+            LOGGER.info("Email desactivado. provider={}, subject={}", mailProvider, subject);
             return;
         }
 
@@ -127,7 +127,7 @@ public class EmailService {
             String code,
             String note) {
         if (!mailEnabled) {
-            LOGGER.info("Email desactivado. Recipient: {}, subject: {}", recipient, subject);
+            LOGGER.info("Email desactivado. provider={}, subject={}", mailProvider, subject);
             return;
         }
 
