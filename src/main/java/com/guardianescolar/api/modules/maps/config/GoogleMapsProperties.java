@@ -12,6 +12,7 @@ public record GoogleMapsProperties(
         String apiKey,
         @NotBlank String baseUrl,
         @NotBlank String routesBaseUrl,
+        @NotBlank String placesBaseUrl,
         @Positive int connectTimeoutMillis,
         @Positive int readTimeoutMillis,
         Cache cache,

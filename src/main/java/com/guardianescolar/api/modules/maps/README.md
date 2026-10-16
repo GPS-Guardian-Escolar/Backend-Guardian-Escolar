@@ -14,6 +14,8 @@ GOOGLE_MAPS_API_KEY=<tu_google_maps_api_key>
 - `POST /api/maps/reverse-geocode` con `{ "latitude": 4.6486, "longitude": -74.1006 }`.
 - `POST /api/maps/directions` con origen y destino por direccion o coordenadas.
 - `GET /api/maps/places/autocomplete?input=colegio`.
+- El autocompletado usa `POST /v1/places:autocomplete` de Places API (New) y mantiene el contrato `status`, `cached` y `predictions` del backend.
+- Se puede enviar opcionalmente `sessionToken` en la consulta para agrupar una sesión de autocompletado.
 
 Todos requieren JWT y autoridad `LOCATION_VIEW` o rol `ADMIN`.
 
@@ -30,6 +32,17 @@ Este módulo actúa como proxy seguro entre los clientes y Google Maps. La llave
 - Geocoding, reverse geocoding y places autocomplete usan TTL largo configurado en `google.maps.cache.geocoding-ttl`.
 - Directions usa TTL corto configurado en `google.maps.cache.directions-ttl`, porque el tráfico puede cambiar rápido.
 - La interfaz `MapsCacheService` permite migrar a Redis sin cambiar controladores ni servicios de negocio.
+
+## Variables de entorno
+
+```bash
+GOOGLE_MAPS_API_KEY=<clave privada del backend>
+GOOGLE_MAPS_BASE_URL=https://maps.googleapis.com/maps/api
+GOOGLE_MAPS_ROUTES_BASE_URL=https://routes.googleapis.com
+GOOGLE_MAPS_PLACES_BASE_URL=https://places.googleapis.com
+```
+
+Docker local y Render usan el mismo código. Solo cambia el valor de `GOOGLE_MAPS_API_KEY` en el entorno; no debe usarse `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` en el backend.
 
 ## Costos
 

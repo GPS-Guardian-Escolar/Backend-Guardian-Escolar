@@ -87,17 +87,19 @@ public class MapsService {
                 });
     }
 
-    public PlaceAutocompleteResponse autocomplete(String input) {
-        String cacheKey = keyService.hash("autocomplete|" + input);
+    public PlaceAutocompleteResponse autocomplete(String input, String sessionToken) {
+        String cacheKey = keyService.hash("autocomplete|" + input + "|" + sessionToken);
         return cacheService.getGeocoding(cacheKey)
                 .map(payload -> readAutocomplete(payload, true))
                 .orElseGet(() -> {
-                    JsonNode payload = googleMapsClient.get("places-autocomplete",
-                            "/place/autocomplete/json?input={input}",
-                            input);
+                    JsonNode payload = googleMapsClient.autocomplete(input, "es", "CO", sessionToken);
                     cacheService.putGeocoding(cacheKey, write(payload));
                     return toAutocompleteResponse(payload, false);
                 });
+    }
+
+    public PlaceAutocompleteResponse autocomplete(String input) {
+        return autocomplete(input, null);
     }
 
     private GeocodeResponse readGeocode(String endpoint, String payload, boolean cached) {
@@ -171,11 +173,43 @@ public class MapsService {
     private PlaceAutocompleteResponse toAutocompleteResponse(JsonNode payload, boolean cached) {
         metricsService.recordRequest("places-autocomplete", cached);
         List<PlacePrediction> predictions = new ArrayList<>();
-        payload.path("predictions").forEach(prediction -> predictions.add(new PlacePrediction(
-                prediction.path("description").asText(null),
-                prediction.path("place_id").asText(null),
-                strings(prediction.path("types")))));
-        return new PlaceAutocompleteResponse(payload.path("status").asText(), cached, predictions);
+        payload.path("suggestions").forEach(suggestion -> {
+            JsonNode placePrediction = suggestion.path("placePrediction");
+            if (!placePrediction.isMissingNode()) {
+                predictions.add(new PlacePrediction(
+                        predictionText(placePrediction),
+                        normalizePlaceId(placePrediction.path("placeId").asText(null)),
+                        strings(placePrediction.path("types"))));
+                return;
+            }
+            JsonNode queryPrediction = suggestion.path("queryPrediction");
+            if (!queryPrediction.isMissingNode()) {
+                predictions.add(new PlacePrediction(
+                        queryPrediction.path("text").path("text").asText(null),
+                        null,
+                        List.of("query")));
+            }
+        });
+        String status = payload.has("suggestions")
+                ? (predictions.isEmpty() ? "ZERO_RESULTS" : "OK")
+                : payload.path("status").asText("UNKNOWN");
+        return new PlaceAutocompleteResponse(status, cached, predictions);
+    }
+
+    private String predictionText(JsonNode prediction) {
+        String text = prediction.path("text").path("text").asText(null);
+        if (StringUtils.hasText(text)) {
+            return text;
+        }
+        String main = prediction.path("structuredFormat").path("mainText").path("text").asText("");
+        String secondary = prediction.path("structuredFormat").path("secondaryText").path("text").asText("");
+        return StringUtils.hasText(secondary) ? main + ", " + secondary : main;
+    }
+
+    private String normalizePlaceId(String placeId) {
+        return placeId != null && placeId.startsWith("places/")
+                ? placeId.substring("places/".length())
+                : placeId;
     }
 
     private String locationValue(LocationInput input) {
