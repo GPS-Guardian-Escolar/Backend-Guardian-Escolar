@@ -69,10 +69,12 @@ class BrevoEmailSenderTest {
                     HttpClient.newHttpClient(),
                     new ObjectMapper());
 
-            IllegalStateException error = assertThrows(IllegalStateException.class, () -> sender.send(
+            EmailDeliveryException error = assertThrows(EmailDeliveryException.class, () -> sender.send(
                     "recipient@example.com", "from@example.com", "Subject", "Plain", "<p>HTML</p>"));
 
             assertEquals("Brevo rechazo el email con HTTP 429", error.getMessage());
+            assertEquals("brevo", error.provider());
+            assertEquals(429, error.providerStatus());
         } finally {
             server.stop(0);
         }
