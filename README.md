@@ -18,7 +18,7 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - Panel administrativo.
 - Auditoria y registro de errores.
 - Configuracion Spring Boot por perfiles.
-- Correo configurable mediante SMTP de Gmail o API HTTPS de Resend.
+- Correo configurable mediante SMTP de Gmail o API HTTPS de Brevo.
 - Dockerfile y docker-compose standalone.
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
@@ -86,19 +86,24 @@ MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS=true
 ```
 
-Para Render Free se puede usar la API HTTPS de Resend, sin exponer una clave SMTP:
+Para Render Free se puede usar la API HTTPS de Brevo, sin depender de SMTP:
 
 ```env
 APP_MAIL_ENABLED=true
-MAIL_PROVIDER=resend
-APP_MAIL_FROM=onboarding@resend.dev
-RESEND_API_KEY=<clave-secreta-de-resend>
+MAIL_PROVIDER=brevo
+APP_MAIL_FROM=gpsguardianescolar@gmail.com
+APP_MAIL_FROM_NAME=GPS Guardian Escolar
+BREVO_API_KEY=<clave-secreta-de-brevo>
+BREVO_API_URL=https://api.brevo.com/v3/smtp/email
 ```
 
-`RESEND_API_KEY` solo debe configurarse en las variables privadas del servicio. El remitente
-`onboarding@resend.dev` es válido para pruebas con las restricciones de Resend y no debe
-tratarse como un remitente de producción para destinatarios arbitrarios. Para producción se
-debe verificar un dominio en Resend y usar una dirección autorizada en `APP_MAIL_FROM`.
+`BREVO_API_KEY` solo debe configurarse en las variables privadas del servicio. El remitente
+debe estar verificado en Brevo; la cuenta y los límites de envío deben validarse antes de
+usar el proveedor con destinatarios reales.
+
+La selección acepta únicamente `smtp` y `brevo`. Un proveedor no seleccionado no necesita su
+clave para que la aplicación arranque; la clave se valida solamente cuando se intenta enviar
+un correo con ese proveedor.
 
 La selección de proveedor conserva los flujos actuales de verificación de correo,
 recuperación de contraseña, confirmación de dispositivo, doble factor y notificaciones. No
