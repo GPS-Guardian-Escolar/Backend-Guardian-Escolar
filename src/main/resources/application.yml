@@ -45,8 +45,12 @@ guardian:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:19006,http://localhost:8081,http://localhost:5173}
   mail:
     enabled: ${APP_MAIL_ENABLED:false}
+    provider: ${MAIL_PROVIDER:smtp}
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      api-url: ${RESEND_API_URL:https://api.resend.com}
   gps:
     route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
   push:
