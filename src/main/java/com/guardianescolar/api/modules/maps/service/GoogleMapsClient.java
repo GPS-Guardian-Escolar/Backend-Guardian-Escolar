@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import com.guardianescolar.api.modules.maps.dto.MapsDtos.LocationInput;
 
 @Service
@@ -24,6 +25,7 @@ public class GoogleMapsClient {
 
     private final RestClient restClient;
     private final RestClient routesRestClient;
+    private final RestClient placesRestClient;
     private final GoogleMapsProperties properties;
     private final ObjectMapper objectMapper;
     private final Retry retry;
@@ -33,6 +35,7 @@ public class GoogleMapsClient {
     public GoogleMapsClient(
             RestClient googleMapsRestClient,
             RestClient googleRoutesRestClient,
+            RestClient googlePlacesRestClient,
             GoogleMapsProperties properties,
             ObjectMapper objectMapper,
             Retry googleMapsRetry,
@@ -40,6 +43,7 @@ public class GoogleMapsClient {
             MapsMetricsService metricsService) {
         this.restClient = googleMapsRestClient;
         this.routesRestClient = googleRoutesRestClient;
+        this.placesRestClient = googlePlacesRestClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.retry = googleMapsRetry;
@@ -79,6 +83,24 @@ public class GoogleMapsClient {
             Duration latency = Duration.between(startedAt, Instant.now());
             metricsService.recordLatency("directions", latency);
             LOGGER.info("Google Maps call endpoint=routes-v2 latencyMs={} quotaUnits=1 cache=miss",
+                    latency.toMillis());
+        }
+    }
+
+    public JsonNode autocomplete(String input, String language, String region, String sessionToken) {
+        if (!StringUtils.hasText(properties.apiKey())) {
+            metricsService.recordError("MISSING_API_KEY");
+            throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "MISSING_API_KEY",
+                    "La llave de servidor de Google Maps no está configurada", Duration.ofMinutes(5));
+        }
+        Instant startedAt = Instant.now();
+        Supplier<JsonNode> supplier = () -> executeAutocomplete(input, language, region, sessionToken);
+        try {
+            return CircuitBreaker.decorateSupplier(circuitBreaker, Retry.decorateSupplier(retry, supplier)).get();
+        } finally {
+            Duration latency = Duration.between(startedAt, Instant.now());
+            metricsService.recordLatency("places-autocomplete", latency);
+            LOGGER.info("Google Maps call endpoint=places-autocomplete-new latencyMs={} quotaUnits=1 cache=miss",
                     latency.toMillis());
         }
     }
@@ -146,6 +168,61 @@ public class GoogleMapsClient {
             throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "PARSE_ERROR",
                     "No fue posible procesar la respuesta de Google Maps", Duration.ofSeconds(30));
         }
+    }
+
+    private JsonNode executeAutocomplete(String input, String language, String region, String sessionToken) {
+        try {
+            var request = objectMapper.createObjectNode();
+            request.put("input", input);
+            if (StringUtils.hasText(language)) {
+                request.put("languageCode", language);
+            }
+            if (StringUtils.hasText(region)) {
+                request.put("regionCode", region);
+            }
+            if (StringUtils.hasText(sessionToken)) {
+                request.put("sessionToken", sessionToken);
+            }
+            String body = placesRestClient.post()
+                    .uri("/v1/places:autocomplete")
+                    .header("Content-Type", "application/json")
+                    .header("X-Goog-Api-Key", properties.apiKey())
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+            return objectMapper.readTree(body);
+        } catch (RestClientResponseException exception) {
+            MapsApiException mapped = mapHttpError(exception.getStatusCode().value());
+            metricsService.recordError(mapped.googleStatus());
+            throw mapped;
+        } catch (Exception exception) {
+            metricsService.recordError("PLACES_API_ERROR");
+            throw new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "PLACES_API_ERROR",
+                    "No fue posible consultar Google Places", Duration.ofSeconds(30));
+        }
+    }
+
+    private MapsApiException mapHttpError(int statusCode) {
+        HttpStatus status = HttpStatus.resolve(statusCode);
+        if (status == null) {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+        }
+        return switch (statusCode) {
+            case 400 -> new MapsApiException(HttpStatus.BAD_REQUEST, "PLACES_BAD_REQUEST",
+                    "Solicitud inválida para Google Places", null);
+            case 401 -> new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "PLACES_UNAUTHORIZED",
+                    "Google Places rechazó la autenticación del servidor", Duration.ofMinutes(5));
+            case 403 -> new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "PLACES_FORBIDDEN",
+                    "Google Places rechazó la solicitud del servidor", Duration.ofMinutes(5));
+            case 404 -> new MapsApiException(HttpStatus.SERVICE_UNAVAILABLE, "PLACES_NOT_FOUND",
+                    "El recurso de Google Places no está disponible", Duration.ofSeconds(30));
+            case 429 -> new MapsApiException(HttpStatus.TOO_MANY_REQUESTS, "PLACES_RATE_LIMITED",
+                    "Cuota de Google Places excedida", Duration.ofSeconds(60));
+            default -> new MapsApiException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "PLACES_HTTP_" + statusCode,
+                    "Google Places no pudo completar la solicitud", Duration.ofSeconds(30));
+        };
     }
 
     private Object[] appendKey(Object[] uriVariables) {

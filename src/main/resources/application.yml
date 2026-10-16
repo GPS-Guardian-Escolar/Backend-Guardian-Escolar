@@ -70,6 +70,7 @@ google:
     api-key: ${GOOGLE_MAPS_API_KEY:}
     base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
     routes-base-url: ${GOOGLE_MAPS_ROUTES_BASE_URL:https://routes.googleapis.com}
+    places-base-url: ${GOOGLE_MAPS_PLACES_BASE_URL:https://places.googleapis.com}
     connect-timeout-millis: ${GOOGLE_MAPS_CONNECT_TIMEOUT_MILLIS:2000}
     read-timeout-millis: ${GOOGLE_MAPS_READ_TIMEOUT_MILLIS:5000}
     cache:
