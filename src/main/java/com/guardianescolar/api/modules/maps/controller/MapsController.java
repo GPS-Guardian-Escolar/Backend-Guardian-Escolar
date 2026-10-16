@@ -72,8 +72,9 @@ public class MapsController {
     @ApiResponse(responseCode = "429", description = "Límite local o cuota de Google excedida")
     @ApiResponse(responseCode = "503", description = "Google Maps no disponible o solicitud rechazada")
     public MapsDtos.PlaceAutocompleteResponse autocomplete(
-            @RequestParam @NotBlank @Size(max = 200) String input) {
+            @RequestParam @NotBlank @Size(max = 200) String input,
+            @RequestParam(required = false) @Size(max = 200) String sessionToken) {
         rateLimiter.check("places-autocomplete");
-        return mapsService.autocomplete(input);
+        return mapsService.autocomplete(input, sessionToken);
     }
 }

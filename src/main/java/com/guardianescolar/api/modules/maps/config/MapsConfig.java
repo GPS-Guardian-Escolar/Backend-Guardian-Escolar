@@ -39,6 +39,17 @@ public class MapsConfig {
     }
 
     @Bean
+    public RestClient googlePlacesRestClient(GoogleMapsProperties properties) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(properties.connectTimeoutMillis());
+        requestFactory.setReadTimeout(properties.readTimeoutMillis());
+        return RestClient.builder()
+                .baseUrl(properties.placesBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
+    }
+
+    @Bean
     public Retry googleMapsRetry(GoogleMapsProperties properties) {
         RetryConfig config = RetryConfig.custom()
                 .maxAttempts(properties.resilience().retryAttempts())
