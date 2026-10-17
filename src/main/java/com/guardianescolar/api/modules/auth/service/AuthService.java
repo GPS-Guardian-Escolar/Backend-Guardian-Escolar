@@ -83,13 +83,13 @@ public class AuthService {
         validateLoginUser(user);
 
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
-        deviceSessionService.validateDeviceLogin(user, request);
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
             return authResponse("", 0, userMapper.toUserResponse(user), true, user.getTwoFactorToken(), user.getTwoFactorMethod());
         }
 
+        deviceSessionService.validateDeviceLogin(user, request);
         String token = jwtService.generateToken(user);
         deviceSessionService.saveSession(user, token, request);
         return authResponse(token, jwtService.getExpirationMinutes(), userMapper.toUserResponse(user), false, null, null);
@@ -192,11 +192,19 @@ public class AuthService {
         return twoFactorService.resend(request);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public AuthDtos.AuthResponse verificarDosFactores(AuthDtos.VerifyTwoFactorRequest request) {
         User user = twoFactorService.verify(request);
+        AuthDtos.LoginRequest loginRequest = new AuthDtos.LoginRequest(
+                user.getEmail(),
+                "",
+                request.deviceIdentifier(),
+                request.deviceName(),
+                request.platform(),
+                request.returnUrl());
+        deviceSessionService.validateDeviceLogin(user, loginRequest);
         String token = jwtService.generateToken(user);
-        deviceSessionService.saveSession(user, token, new AuthDtos.LoginRequest(user.getEmail(), "", null, null, null, null));
+        deviceSessionService.saveSession(user, token, loginRequest);
         return authResponse(token, jwtService.getExpirationMinutes(), userMapper.toUserResponse(user), false, null, null);
     }
 
