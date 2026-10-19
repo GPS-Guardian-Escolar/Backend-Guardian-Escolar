@@ -10,6 +10,7 @@ import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.modules.students.domain.Student;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
+import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -28,6 +29,7 @@ public class StudentService {
     private static final int MAX_STUDENT_AGE = 21;
 
     private final StudentRepository studentRepository;
+    private final StudentDeviceRepository studentDeviceRepository;
     private final UserRepository userRepository;
     private final RouteRepository routeRepository;
     private final StudentRouteRepository studentRouteRepository;
@@ -110,6 +112,17 @@ public class StudentService {
     }
 
     @Transactional
+    public void unlinkDevice(UUID studentId) {
+        Student student = getManageable(studentId);
+        studentDeviceRepository.findFirstByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId)
+                .ifPresent(device -> {
+                    device.setIsActive(false);
+                    device.setDeletedAt(OffsetDateTime.now());
+                    studentDeviceRepository.save(device);
+                });
+    }
+
+    @Transactional
     public StudentDtos.LinkedGuardianResponse share(UUID studentId, StudentDtos.ShareStudentRequest request) {
         return studentGuardianService.share(getManageable(studentId), request);
     }
@@ -139,6 +152,9 @@ public class StudentService {
         student.setFullName(request.fullName().trim());
         student.setSchoolGrade(request.schoolGrade());
         student.setBirthDate(request.birthDate());
+        if (request.photoData() != null) {
+            student.setPhotoData(request.photoData());
+        }
     }
 
     private void validateBirthDate(LocalDate birthDate) {

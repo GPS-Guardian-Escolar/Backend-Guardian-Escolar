@@ -48,6 +48,9 @@ public class Student {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
+    @Column(name = "photo_data", columnDefinition = "text")
+    private String photoData;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 
