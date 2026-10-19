@@ -83,6 +83,8 @@ public class AuthService {
         validateLoginUser(user);
 
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+
+        // The device must be approved before revealing or issuing a 2FA challenge.
         deviceSessionService.validateDeviceLogin(user, request);
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
@@ -192,11 +194,19 @@ public class AuthService {
         return twoFactorService.resend(request);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public AuthDtos.AuthResponse verificarDosFactores(AuthDtos.VerifyTwoFactorRequest request) {
         User user = twoFactorService.verify(request);
+        AuthDtos.LoginRequest loginRequest = new AuthDtos.LoginRequest(
+                user.getEmail(),
+                "",
+                request.deviceIdentifier(),
+                request.deviceName(),
+                request.platform(),
+                request.returnUrl());
+        deviceSessionService.validateDeviceLogin(user, loginRequest);
         String token = jwtService.generateToken(user);
-        deviceSessionService.saveSession(user, token, new AuthDtos.LoginRequest(user.getEmail(), "", null, null, null, null));
+        deviceSessionService.saveSession(user, token, loginRequest);
         return authResponse(token, jwtService.getExpirationMinutes(), userMapper.toUserResponse(user), false, null, null);
     }
 

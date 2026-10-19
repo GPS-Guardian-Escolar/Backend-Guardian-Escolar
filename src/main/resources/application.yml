@@ -45,8 +45,13 @@ guardian:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:19006,http://localhost:8081,http://localhost:5173}
   mail:
     enabled: ${APP_MAIL_ENABLED:false}
+    provider: ${MAIL_PROVIDER:smtp}
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
+    from-name: ${APP_MAIL_FROM_NAME:}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
+    brevo:
+      api-key: ${BREVO_API_KEY:}
+      api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
   gps:
     route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
   push:
@@ -59,6 +64,32 @@ guardian:
     provider-url: ${SMS_PROVIDER_URL:}
     api-key: ${SMS_API_KEY:}
     from: ${SMS_FROM:GuardianEscolar}
+
+google:
+  maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com/maps/api}
+    routes-base-url: ${GOOGLE_MAPS_ROUTES_BASE_URL:https://routes.googleapis.com}
+    places-base-url: ${GOOGLE_MAPS_PLACES_BASE_URL:https://places.googleapis.com}
+    connect-timeout-millis: ${GOOGLE_MAPS_CONNECT_TIMEOUT_MILLIS:2000}
+    read-timeout-millis: ${GOOGLE_MAPS_READ_TIMEOUT_MILLIS:5000}
+    cache:
+      geocoding-ttl: ${GOOGLE_MAPS_GEOCODING_CACHE_TTL:48h}
+      directions-ttl: ${GOOGLE_MAPS_DIRECTIONS_CACHE_TTL:10m}
+      maximum-size: ${GOOGLE_MAPS_CACHE_MAXIMUM_SIZE:10000}
+    resilience:
+      retry-attempts: ${GOOGLE_MAPS_RETRY_ATTEMPTS:3}
+      retry-wait: ${GOOGLE_MAPS_RETRY_WAIT:500ms}
+      circuit-breaker-failure-rate-threshold: ${GOOGLE_MAPS_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50}
+      circuit-breaker-sliding-window-size: ${GOOGLE_MAPS_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:20}
+    rate-limit:
+      permits-per-minute: ${GOOGLE_MAPS_RATE_LIMIT_PER_MINUTE:60}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
 
 logging:
   level:

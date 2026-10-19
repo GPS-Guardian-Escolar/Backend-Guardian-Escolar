@@ -47,7 +47,7 @@ public class DeviceSessionService {
                 sessionRequest.getDeviceName(),
                 sessionRequest.getPlatform(),
                 sessionRequest.getDeviceConfirmationReturnUrl());
-        throw new IllegalArgumentException(
+        throw new DeviceConfirmationRequiredException(
                 "Este email ya está en uso en otro dispositivo. Revisa tu email para confirmar este nuevo inicio de sesión.");
     }
 

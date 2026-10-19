@@ -5,12 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +15,8 @@ public class EmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailService.class);
 
-    private final JavaMailSender javaMailSender;
+    private final SmtpEmailSender smtpEmailSender;
+    private final BrevoEmailSender brevoEmailSender;
     private final EmailLinkService emailLinkService;
     private final EmailTemplateService emailTemplateService;
 
@@ -27,6 +25,9 @@ public class EmailService {
 
     @Value("${guardian.mail.from:no-reply@guardianescolar.local}")
     private String from;
+
+    @Value("${guardian.mail.provider:smtp}")
+    private String mailProvider;
 
     public void enviarVerificacionEmail(String recipient, String token, String returnUrl) {
         String url = emailLinkService.emailVerificationUrl(token, returnUrl);
@@ -106,23 +107,16 @@ public class EmailService {
             String url,
             String note) {
         if (!mailEnabled) {
-            LOGGER.info("Email desactivado. Recipient: {}, subject: {}, url: {}", recipient, subject, url);
+            LOGGER.info("Email desactivado. provider={}, subject={}", mailProvider, subject);
             return;
         }
 
-        try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(recipient);
-            helper.setSubject(subject);
-            helper.setText(
-                    emailTemplateService.plainAction(title, description, textoBoton, url, note),
-                    emailTemplateService.htmlAction(title, description, textoBoton, url, note));
-            javaMailSender.send(message);
-        } catch (MessagingException error) {
-            throw new IllegalStateException("No se pudo construir el email", error);
-        }
+        emailSender().send(
+                recipient,
+                from,
+                subject,
+                emailTemplateService.plainAction(title, description, textoBoton, url, note),
+                emailTemplateService.htmlAction(title, description, textoBoton, url, note));
     }
 
     private void enviarCodigo(
@@ -133,22 +127,24 @@ public class EmailService {
             String code,
             String note) {
         if (!mailEnabled) {
-            LOGGER.info("Email desactivado. Recipient: {}, subject: {}", recipient, subject);
+            LOGGER.info("Email desactivado. provider={}, subject={}", mailProvider, subject);
             return;
         }
 
-        try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(recipient);
-            helper.setSubject(subject);
-            helper.setText(
-                    emailTemplateService.plainCode(title, description, code, note),
-                    emailTemplateService.htmlCode(title, description, code, note));
-            javaMailSender.send(message);
-        } catch (MessagingException error) {
-            throw new IllegalStateException("No se pudo construir el email", error);
-        }
+        emailSender().send(
+                recipient,
+                from,
+                subject,
+                emailTemplateService.plainCode(title, description, code, note),
+                emailTemplateService.htmlCode(title, description, code, note));
+    }
+
+    private EmailSender emailSender() {
+        return switch (mailProvider.trim().toLowerCase(Locale.ROOT)) {
+            case "smtp" -> smtpEmailSender;
+            case "brevo" -> brevoEmailSender;
+            default -> throw new IllegalStateException(
+                    "MAIL_PROVIDER no soportado: " + mailProvider + ". Usa smtp o brevo.");
+        };
     }
 }

@@ -29,14 +29,14 @@ public class EmailLinkService {
     }
 
     private String returnUrlParam(String returnUrl) {
-        if (returnUrl == null || returnUrl.isBlank()) {
+        if (!isSafeReturnUrl(returnUrl)) {
             return "";
         }
         return "&returnUrl=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
     }
 
     private String frontendOriginFromReturnUrl(String returnUrl) {
-        if (returnUrl == null || returnUrl.isBlank()) {
+        if (!isSafeReturnUrl(returnUrl)) {
             return frontendBaseUrl;
         }
         try {
@@ -47,6 +47,22 @@ public class EmailLinkService {
             return uri.getScheme() + "://" + uri.getAuthority();
         } catch (IllegalArgumentException error) {
             return frontendBaseUrl;
+        }
+    }
+
+    private boolean isSafeReturnUrl(String returnUrl) {
+        if (returnUrl == null || returnUrl.isBlank()) {
+            return false;
+        }
+        if (returnUrl.startsWith("/") && !returnUrl.startsWith("//")) {
+            return true;
+        }
+        try {
+            URI uri = URI.create(returnUrl);
+            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null;
+        } catch (IllegalArgumentException error) {
+            return false;
         }
     }
 }
