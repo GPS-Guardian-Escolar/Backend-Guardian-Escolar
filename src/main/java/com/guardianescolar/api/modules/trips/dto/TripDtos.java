@@ -16,10 +16,10 @@ public final class TripDtos {
     private TripDtos() {
     }
 
-    public record TripRequest(
-            @NotNull UUID studentId,
-            @NotNull UUID routeId,
-            @PastOrPresent OffsetDateTime tripStartedAt) {
+        public record TripRequest(
+                @NotNull UUID studentId,
+                UUID routeId,
+                @PastOrPresent OffsetDateTime tripStartedAt) {
     }
 
     public record ChangeStatusRequest(

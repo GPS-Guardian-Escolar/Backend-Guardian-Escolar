@@ -3,11 +3,16 @@ package com.guardianescolar.api.shared.exception;
 import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
+import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
+import com.guardianescolar.api.modules.auth.service.DeviceConfirmationRequiredException;
+import com.guardianescolar.api.modules.maps.exception.MapsApiException;
+import com.guardianescolar.api.modules.maps.exception.MapsRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,10 +20,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class ApiExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     private final ErrorLogService errorLogService;
 
@@ -32,6 +41,19 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleBadRequest(RuntimeException exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
         return build(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(DeviceConfirmationRequiredException.class)
+    public ResponseEntity<ApiError> handleDeviceConfirmationRequired(
+            DeviceConfirmationRequiredException exception,
+            HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED)
+                .body(new ApiError(
+                        OffsetDateTime.now(),
+                        HttpStatus.PRECONDITION_REQUIRED.value(),
+                        exception.getMessage(),
+                        List.of(DeviceConfirmationRequiredException.CODE)));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -53,6 +75,32 @@ public class ApiExceptionHandler {
         return build(HttpStatus.CONFLICT, "La operación viola una restricción de datos");
     }
 
+    @ExceptionHandler(MapsApiException.class)
+    public ResponseEntity<ApiError> handleMapsApi(MapsApiException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(exception.status());
+        if (exception.retryAfter() != null) {
+            builder.header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfter().toSeconds()));
+        }
+        return builder.body(new ApiError(
+                OffsetDateTime.now(),
+                exception.status().value(),
+                exception.getMessage(),
+                List.of(exception.googleStatus())));
+    }
+
+    @ExceptionHandler(MapsRateLimitException.class)
+    public ResponseEntity<ApiError> handleMapsRateLimit(MapsRateLimitException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfter().toSeconds()))
+                .body(new ApiError(
+                        OffsetDateTime.now(),
+                        HttpStatus.TOO_MANY_REQUESTS.value(),
+                        exception.getMessage(),
+                        List.of()));
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
@@ -68,7 +116,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
+        LOGGER.error("Error no controlado en {} {}: {}", request.getMethod(), request.getRequestURI(),
+                exception.getClass().getSimpleName(), exception);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor");
+    }
+
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiError> handleEmailDelivery(EmailDeliveryException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        LOGGER.error("Fallo del proveedor de correo provider={}, status={}, route={}",
+                exception.provider(), exception.providerStatus(), request.getRequestURI(), exception);
+        return build(HttpStatus.BAD_GATEWAY, "No se pudo enviar el correo. Intenta nuevamente más tarde.");
     }
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message) {

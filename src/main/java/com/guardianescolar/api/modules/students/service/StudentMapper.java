@@ -38,6 +38,7 @@ public class StudentMapper {
                 student.getFullName(),
                 student.getSchoolGrade(),
                 student.getBirthDate(),
+                student.getPhotoData(),
                 student.getIsActive(),
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()),
                 1 + studentGuardianRepository.countByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), STATUS_ACTIVE),
@@ -58,6 +59,10 @@ public class StudentMapper {
     }
 
     public StudentDtos.StudentDeviceResponse toDeviceResponse(StudentDevice device) {
+        return toDeviceResponse(device, null);
+    }
+
+    public StudentDtos.StudentDeviceResponse toDeviceResponse(StudentDevice device, String childToken) {
         return new StudentDtos.StudentDeviceResponse(
                 device.getId(),
                 device.getStudent().getId(),
@@ -67,7 +72,8 @@ public class StudentMapper {
                 device.getLinkedAt(),
                 device.getLastUsedAt(),
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(
-                        device.getStudent().getId()));
+                        device.getStudent().getId()),
+                childToken);
     }
 
     private List<RouteDtos.RouteResponse> assignedRoutes(UUID studentId) {

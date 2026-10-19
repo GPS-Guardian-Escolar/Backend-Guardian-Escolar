@@ -62,6 +62,13 @@ public class StudentController {
         studentService.assignRoute(studentId, routeId);
     }
 
+    @DeleteMapping("/{studentId}/device")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
+    public void unlinkDevice(@PathVariable UUID studentId) {
+        studentService.unlinkDevice(studentId);
+    }
+
     @GetMapping("/{studentId}/guardians")
     @PreAuthorize("hasAuthority('STUDENT_READ') or hasRole('ADMIN')")
     public List<StudentDtos.LinkedGuardianResponse> listGuardians(@PathVariable UUID studentId) {

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -17,11 +17,14 @@ public final class SafeZoneDtos {
 
     public record SafeZoneRequest(
             @NotNull UUID studentId,
-            @NotBlank @Size(max = 100) String zoneName,
+            @NotBlank @Size(min = 2, max = 100) String zoneName,
+            @Size(max = 20) String zoneType,
+            @Size(max = 20) String color,
+            @NotBlank @Size(min = 5, max = 160) String address,
             @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
             @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
-            @NotNull @Positive @Max(50000) Integer radiusMeters,
-            @Positive @Max(86400) Integer inactivityAlertSeconds) {
+            @NotNull @Min(5) @Max(50000) Integer radiusMeters,
+            @Min(1) @Max(86400) Integer inactivityAlertSeconds) {
     }
 
     public record SafeZoneResponse(
@@ -29,6 +32,9 @@ public final class SafeZoneDtos {
             UUID studentId,
             String studentName,
             String zoneName,
+            String zoneType,
+            String color,
+            String address,
             BigDecimal latitude,
             BigDecimal longitude,
             Integer radiusMeters,

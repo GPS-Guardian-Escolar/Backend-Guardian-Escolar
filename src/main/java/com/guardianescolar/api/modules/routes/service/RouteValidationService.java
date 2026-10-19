@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 public class RouteValidationService {
 
     public void validateRequest(RouteDtos.RouteRequest request) {
+        if (request.originLatitude() == null || request.originLongitude() == null
+                || request.destinationLatitude() == null || request.destinationLongitude() == null) {
+            throw new IllegalArgumentException("Origin and destination must be geocoded before saving the route");
+        }
         validateCoordinatePair("origin", request.originLatitude(), request.originLongitude());
         validateCoordinatePair("destination", request.destinationLatitude(), request.destinationLongitude());
         if (request.stops() == null || request.stops().isEmpty()) {
