@@ -51,7 +51,7 @@ public class TripAlertService {
                     trip,
                     trip.getStudent().getUser(),
                     NotificationEventTypes.INACTIVITY,
-                    "Long inactivity detected during " + trip.getStudent().getFullName() + "'s trip");
+                    "Se detectó inactividad prolongada durante el trayecto de " + trip.getStudent().getFullName());
         }
     }
 
@@ -62,33 +62,47 @@ public class TripAlertService {
             return;
         }
 
-        Coordinate previous = coordinateRepository.findTop2ByTripIdOrderByRecordedAtDesc(trip.getId()).stream()
+        List<Coordinate> recentCoordinates = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId()).stream()
                 .filter(recorded -> !recorded.getId().equals(coordinate.getId()))
-                .findFirst()
-                .orElse(null);
+                .toList();
+        Coordinate previous = recentCoordinates.stream().findFirst().orElse(null);
+        Coordinate beforePrevious = recentCoordinates.size() > 1 ? recentCoordinates.get(1) : null;
+
+        if (previous == null) {
+            return;
+        }
 
         for (SafeZone zone : zones) {
-            notifySafeZoneTransition(trip, coordinate, previous, zone);
+            notifySafeZoneTransition(trip, coordinate, previous, beforePrevious, zone);
         }
     }
 
-    private void notifySafeZoneTransition(Trip trip, Coordinate coordinate, Coordinate previous, SafeZone zone) {
+    private void notifySafeZoneTransition(
+            Trip trip,
+            Coordinate coordinate,
+            Coordinate previous,
+            Coordinate beforePrevious,
+            SafeZone zone) {
         boolean insideNow = isInsideZone(coordinate, zone);
         boolean insideBefore = previous != null && isInsideZone(previous, zone);
-        if (insideNow && !insideBefore) {
+        boolean insideBeforePrevious = beforePrevious != null && isInsideZone(beforePrevious, zone);
+        if (beforePrevious == null || insideNow != insideBefore) {
+            return;
+        }
+        if (insideNow && !insideBeforePrevious) {
             notificationService.createForUser(
                     trip,
                     zone,
                     trip.getStudent().getUser(),
                     NotificationEventTypes.SAFE_ZONE_ENTRY,
-                    trip.getStudent().getFullName() + " entered safe zone " + zone.getZoneName());
-        } else if (!insideNow && insideBefore) {
+                    trip.getStudent().getFullName() + " ingresó a la zona segura " + zone.getZoneName());
+        } else if (!insideNow && insideBeforePrevious) {
             notificationService.createForUser(
                     trip,
                     zone,
                     trip.getStudent().getUser(),
                     NotificationEventTypes.SAFE_ZONE_EXIT,
-                    trip.getStudent().getFullName() + " left safe zone " + zone.getZoneName());
+                    trip.getStudent().getFullName() + " salió de la zona segura " + zone.getZoneName());
         }
     }
 
@@ -113,7 +127,7 @@ public class TripAlertService {
                     trip,
                     trip.getStudent().getUser(),
                     NotificationEventTypes.ROUTE_DEVIATION,
-                    "Possible route deviation detected for " + trip.getStudent().getFullName());
+                    "Se detectó un posible desvío de ruta para " + trip.getStudent().getFullName());
         }
     }
 

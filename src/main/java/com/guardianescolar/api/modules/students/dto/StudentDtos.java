@@ -73,7 +73,8 @@ public final class StudentDtos {
             Boolean isActive,
             OffsetDateTime linkedAt,
             OffsetDateTime lastUsedAt,
-            Long linkedDevices) {
+            Long linkedDevices,
+            String childToken) {
     }
 
     public record LinkedProfileResponse(
@@ -84,6 +85,9 @@ public final class StudentDtos {
             LocalDate birthDate,
             String contactName,
             String contactPhone,
-            String contactRelationship) {
+            String contactRelationship,
+            Long linkedDevices) {
     }
 }
+
+
