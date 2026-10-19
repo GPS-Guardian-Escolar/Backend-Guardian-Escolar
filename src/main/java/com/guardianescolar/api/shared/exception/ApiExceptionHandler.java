@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
 import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
+import com.guardianescolar.api.modules.auth.service.DeviceConfirmationRequiredException;
 import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import com.guardianescolar.api.modules.maps.exception.MapsRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,19 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleBadRequest(RuntimeException exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
         return build(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(DeviceConfirmationRequiredException.class)
+    public ResponseEntity<ApiError> handleDeviceConfirmationRequired(
+            DeviceConfirmationRequiredException exception,
+            HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return ResponseEntity.status(HttpStatus.PRECONDITION_REQUIRED)
+                .body(new ApiError(
+                        OffsetDateTime.now(),
+                        HttpStatus.PRECONDITION_REQUIRED.value(),
+                        exception.getMessage(),
+                        List.of(DeviceConfirmationRequiredException.CODE)));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

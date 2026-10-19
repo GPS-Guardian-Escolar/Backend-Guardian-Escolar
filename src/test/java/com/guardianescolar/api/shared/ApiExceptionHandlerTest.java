@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
 import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
+import com.guardianescolar.api.modules.auth.service.DeviceConfirmationRequiredException;
 import com.guardianescolar.api.shared.exception.ApiExceptionHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -41,5 +42,19 @@ class ApiExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("validation", response.getBody().message());
         verify(errorLogService).register(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(request));
+    }
+
+    @Test
+    void exposesStableDeviceConfirmationCodeWithoutExposingSecrets() {
+        ErrorLogService errorLogService = mock(ErrorLogService.class);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        ApiExceptionHandler handler = new ApiExceptionHandler(errorLogService);
+        DeviceConfirmationRequiredException exception = new DeviceConfirmationRequiredException("Approve this device");
+
+        var response = handler.handleDeviceConfirmationRequired(exception, request);
+
+        assertEquals(HttpStatus.PRECONDITION_REQUIRED, response.getStatusCode());
+        assertEquals(DeviceConfirmationRequiredException.CODE, response.getBody().errors().get(0));
+        verify(errorLogService).register(exception, request);
     }
 }

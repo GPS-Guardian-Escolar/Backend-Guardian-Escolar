@@ -54,7 +54,7 @@ class DeviceSessionServiceTest {
         when(repository.findFirstByUserIdAndDeviceIdentifierAndEmailConfirmedFalseOrderByCreatedAtDesc(
                 user.getId(), "new-device")).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        DeviceConfirmationRequiredException exception = assertThrows(DeviceConfirmationRequiredException.class,
                 () -> service.validateDeviceLogin(user, request));
 
         assertTrue(exception.getMessage().contains("Revisa tu email"));

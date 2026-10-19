@@ -84,12 +84,14 @@ public class AuthService {
 
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
 
+        // The device must be approved before revealing or issuing a 2FA challenge.
+        deviceSessionService.validateDeviceLogin(user, request);
+
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
             return authResponse("", 0, userMapper.toUserResponse(user), true, user.getTwoFactorToken(), user.getTwoFactorMethod());
         }
 
-        deviceSessionService.validateDeviceLogin(user, request);
         String token = jwtService.generateToken(user);
         deviceSessionService.saveSession(user, token, request);
         return authResponse(token, jwtService.getExpirationMinutes(), userMapper.toUserResponse(user), false, null, null);
