@@ -1,4 +1,4 @@
-# HU-20 - Backend Implementado
+# HU-20 Backend Implementado
 
 ## Objetivo
 

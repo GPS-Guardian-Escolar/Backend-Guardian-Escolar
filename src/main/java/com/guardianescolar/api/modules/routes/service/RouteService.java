@@ -26,7 +26,6 @@ public class RouteService {
     private final RouteAccessService routeAccessService;
     private final RouteValidationService routeValidationService;
     private final RouteMapper routeMapper;
-    private final RouteGeometryService routeGeometryService;
 
     @Transactional(readOnly = true)
     public List<RouteDtos.RouteResponse> list() {
@@ -47,8 +46,7 @@ public class RouteService {
         applyData(route, request);
         route.setCreatedBy(current);
         Route saved = routeRepository.save(route);
-        List<Stop> stops = saveStops(saved, request.stops());
-        return routeMapper.toResponse(saved, stops);
+        return routeMapper.toResponse(saved, saveStops(saved, request.stops()));
     }
 
     @Transactional
@@ -60,8 +58,7 @@ public class RouteService {
         applyData(route, request);
         route.setUpdatedBy(current);
         Route saved = routeRepository.save(route);
-        List<Stop> stops = replaceStopsIfRequested(saved, request.stops());
-        return routeMapper.toResponse(saved, stops);
+        return routeMapper.toResponse(saved, replaceStopsIfRequested(saved, request.stops()));
     }
 
     @Transactional
@@ -80,15 +77,7 @@ public class RouteService {
         Route route = findActive(routeId);
         routeAccessService.validateAccess(route, current);
         Stop stop = routeValidationService.createStop(route, request);
-        Stop saved = stopRepository.save(stop);
-        return routeMapper.toStopResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public RouteDtos.RouteGeometryResponse geometry(UUID routeId) {
-        Route route = findActive(routeId);
-        routeAccessService.validateAccess(route, currentUserService.currentUser());
-        return routeGeometryService.calculate(route, stopsFor(route));
+        return routeMapper.toStopResponse(stopRepository.save(stop));
     }
 
     @Transactional(readOnly = true)
