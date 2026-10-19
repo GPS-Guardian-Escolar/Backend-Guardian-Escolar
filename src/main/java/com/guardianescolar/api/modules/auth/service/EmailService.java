@@ -16,7 +16,7 @@ public class EmailService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailService.class);
 
     private final SmtpEmailSender smtpEmailSender;
-    private final ResendEmailSender resendEmailSender;
+    private final BrevoEmailSender brevoEmailSender;
     private final EmailLinkService emailLinkService;
     private final EmailTemplateService emailTemplateService;
 
@@ -142,9 +142,9 @@ public class EmailService {
     private EmailSender emailSender() {
         return switch (mailProvider.trim().toLowerCase(Locale.ROOT)) {
             case "smtp" -> smtpEmailSender;
-            case "resend" -> resendEmailSender;
+            case "brevo" -> brevoEmailSender;
             default -> throw new IllegalStateException(
-                    "MAIL_PROVIDER no soportado: " + mailProvider + ". Usa smtp o resend.");
+                    "MAIL_PROVIDER no soportado: " + mailProvider + ". Usa smtp o brevo.");
         };
     }
 }
