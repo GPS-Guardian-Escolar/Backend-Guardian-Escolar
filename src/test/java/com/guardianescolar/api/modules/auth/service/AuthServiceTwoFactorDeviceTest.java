@@ -72,6 +72,46 @@ class AuthServiceTwoFactorDeviceTest {
     }
 
     @Test
+    void validatesDeviceBeforeSendingTwoFactorChallenge() {
+        User user = user();
+        user.setEmailVerified(true);
+        user.setIsActive(true);
+        user.setTwoFactorEnabled(true);
+        user.setTwoFactorMethod("EMAIL");
+        AuthDtos.LoginRequest request = new AuthDtos.LoginRequest(
+                user.getEmail(), "Password1!", "device-2", "Chrome", "WEB", "https://frontend.example.com/login");
+        when(validationService.normalizeEmail(user.getEmail())).thenReturn(user.getEmail());
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(java.util.Optional.of(user));
+
+        authService.login(request);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(deviceSessionService, twoFactorService);
+        order.verify(deviceSessionService).validateDeviceLogin(user, request);
+        order.verify(twoFactorService).prepareAndSend(user, "EMAIL");
+        verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
+    void doesNotSendTwoFactorChallengeWhenDeviceNeedsConfirmation() {
+        User user = user();
+        user.setEmailVerified(true);
+        user.setIsActive(true);
+        user.setTwoFactorEnabled(true);
+        user.setTwoFactorMethod("EMAIL");
+        AuthDtos.LoginRequest request = new AuthDtos.LoginRequest(
+                user.getEmail(), "Password1!", "device-2", "Chrome", "WEB", "https://frontend.example.com/login");
+        when(validationService.normalizeEmail(user.getEmail())).thenReturn(user.getEmail());
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(java.util.Optional.of(user));
+        org.mockito.Mockito.doThrow(new DeviceConfirmationRequiredException("confirm device"))
+                .when(deviceSessionService).validateDeviceLogin(user, request);
+
+        assertThrows(DeviceConfirmationRequiredException.class, () -> authService.login(request));
+
+        verify(twoFactorService, never()).prepareAndSend(any(), any());
+        verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
     void doesNotIssueJwtWhenNewDeviceNeedsConfirmationAfterTwoFactor() {
         User user = user();
         AuthDtos.VerifyTwoFactorRequest request = verifyRequest();
