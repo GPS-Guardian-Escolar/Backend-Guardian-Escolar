@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +26,7 @@ public class BrevoEmailSender implements EmailSender {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public BrevoEmailSender(
             @Value("${guardian.mail.brevo.api-key:}") String apiKey,
             @Value("${guardian.mail.from-name:}") String fromName,
