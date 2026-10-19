@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
 
@@ -47,6 +47,8 @@ guardian:
     enabled: ${APP_MAIL_ENABLED:false}
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
+  osrm:
+    base-url: ${OSRM_BASE_URL:https://router.project-osrm.org}
   gps:
     route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
   push:
