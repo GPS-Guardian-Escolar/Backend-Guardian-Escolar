@@ -3,6 +3,7 @@ package com.guardianescolar.api.shared.exception;
 import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
+import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
 import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import com.guardianescolar.api.modules.maps.exception.MapsRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,10 +19,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class ApiExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     private final ErrorLogService errorLogService;
 
@@ -97,7 +102,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
+        LOGGER.error("Error no controlado en {} {}: {}", request.getMethod(), request.getRequestURI(),
+                exception.getClass().getSimpleName(), exception);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor");
+    }
+
+    @ExceptionHandler(EmailDeliveryException.class)
+    public ResponseEntity<ApiError> handleEmailDelivery(EmailDeliveryException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        LOGGER.error("Fallo del proveedor de correo provider={}, status={}, route={}",
+                exception.provider(), exception.providerStatus(), request.getRequestURI(), exception);
+        return build(HttpStatus.BAD_GATEWAY, "No se pudo enviar el correo. Intenta nuevamente más tarde.");
     }
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message) {

@@ -48,7 +48,11 @@ public class BrevoEmailSender implements EmailSender {
     @Override
     public void send(String recipient, String from, String subject, String text, String html) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("BREVO_API_KEY es obligatorio cuando MAIL_PROVIDER=brevo");
+            throw new EmailDeliveryException(
+                    "brevo",
+                    null,
+                    "BREVO_API_KEY es obligatorio cuando MAIL_PROVIDER=brevo",
+                    null);
         }
 
         Map<String, Object> sender = new LinkedHashMap<>();
@@ -74,15 +78,19 @@ public class BrevoEmailSender implements EmailSender {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("Brevo rechazo el email con HTTP " + response.statusCode());
+                throw new EmailDeliveryException(
+                        "brevo",
+                        response.statusCode(),
+                        "Brevo rechazo el email con HTTP " + response.statusCode(),
+                        null);
             }
         } catch (JsonProcessingException error) {
             throw new IllegalStateException("No se pudo serializar el email para Brevo", error);
         } catch (IOException error) {
-            throw new IllegalStateException("No se pudo conectar con Brevo", error);
+            throw new EmailDeliveryException("brevo", null, "No se pudo conectar con Brevo", error);
         } catch (InterruptedException error) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("La solicitud a Brevo fue interrumpida", error);
+            throw new EmailDeliveryException("brevo", null, "La solicitud a Brevo fue interrumpida", error);
         }
     }
 }
