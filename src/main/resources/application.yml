@@ -49,11 +49,12 @@ guardian:
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
     from-name: ${APP_MAIL_FROM_NAME:}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:${FRONTEND_BASE_URL:http://localhost:8081}}
     brevo:
       api-key: ${BREVO_API_KEY:}
       api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
   gps:
-    route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
+    route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:${GPS_DESVIO_UMBRAL_METROS:150}}
   push:
     expo:
       enabled: ${EXPO_PUSH_ENABLED:false}

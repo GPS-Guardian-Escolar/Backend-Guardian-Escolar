@@ -1,13 +1,16 @@
 package com.guardianescolar.api.shared.security;
 
 import lombok.RequiredArgsConstructor;
+import com.guardianescolar.api.modules.trips.repository.TripRepository;
 
 import java.util.List;
+import java.util.UUID;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,11 +25,15 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TripRepository tripRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         if (StompCommand.CONNECT != accessor.getCommand()) {
+            if (StompCommand.SUBSCRIBE == accessor.getCommand()) {
+                authorizeTripSubscription(accessor);
+            }
             return message;
         }
 
@@ -42,6 +49,33 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                 userDetails.getAuthorities());
         accessor.setUser(authentication);
         return message;
+    }
+
+    private void authorizeTripSubscription(StompHeaderAccessor accessor) {
+        String destination = accessor.getDestination();
+        String prefix = "/topic/trips/";
+        String suffix = "/coordinates";
+        if (destination == null || !destination.startsWith(prefix) || !destination.endsWith(suffix)) {
+            return;
+        }
+        if (!(accessor.getUser() instanceof Authentication authentication)) {
+            throw new AccessDeniedException("Autenticación WebSocket requerida");
+        }
+        String value = destination.substring(prefix.length(), destination.length() - suffix.length());
+        UUID tripId;
+        try {
+            tripId = UUID.fromString(value);
+        } catch (IllegalArgumentException error) {
+            throw new AccessDeniedException("Viaje WebSocket inválido");
+        }
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())
+                        || "ADMIN".equals(authority.getAuthority()));
+        boolean owner = tripRepository.existsByIdAndStudentUserEmailIgnoreCaseAndDeletedAtIsNull(
+                tripId, authentication.getName());
+        if (!admin && !owner) {
+            throw new AccessDeniedException("No tienes acceso a este viaje");
+        }
     }
 
     private String extractToken(StompHeaderAccessor accessor) {

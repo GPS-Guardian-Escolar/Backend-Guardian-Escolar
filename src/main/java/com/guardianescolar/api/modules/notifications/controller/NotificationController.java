@@ -31,6 +31,11 @@ public class NotificationController {
         return notificationService.markAsRead(receiptId);
     }
 
+    @PatchMapping("/read-all")
+    public int markAllAsRead() {
+        return notificationService.markAllAsRead();
+    }
+
     @GetMapping("/settings")
     public NotificationDtos.NotificationSettingsResponse getSettings() {
         return notificationService.getCurrentSettings();
