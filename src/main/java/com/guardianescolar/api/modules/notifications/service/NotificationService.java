@@ -48,6 +48,16 @@ public class NotificationService {
     }
 
     @Transactional
+    public int markAllAsRead() {
+        User current = currentUserService.currentUser();
+        List<NotificationReceipt> receipts =
+                notificationReceiptRepository.findByUserEmailIgnoreCaseAndWasReadFalse(current.getEmail());
+        receipts.forEach(NotificationReceipt::markAsRead);
+        notificationReceiptRepository.saveAll(receipts);
+        return receipts.size();
+    }
+
+    @Transactional
     public NotificationDtos.NotificationSettingsResponse getCurrentSettings() {
         User current = currentUserService.currentUser();
         return settingsResponse(getOrInitializeSettings(current));

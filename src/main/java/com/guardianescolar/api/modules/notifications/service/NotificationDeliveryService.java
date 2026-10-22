@@ -24,6 +24,9 @@ public class NotificationDeliveryService {
     private final EmergencyContactRepository emergencyContactRepository;
 
     public boolean deliver(Notification notification, NotificationSettings settings, Trip trip, User user) {
+        if (!eventEnabled(notification.getEventType(), settings)) {
+            return false;
+        }
         boolean sent = false;
         if (Boolean.TRUE.equals(settings.getPushChannel())) {
             sent = expoPushService.send(user, notification) || sent;
@@ -35,6 +38,17 @@ public class NotificationDeliveryService {
             sent = smsService.sendToPhones(smsPhones(trip, user), notification.getMessage()) || sent;
         }
         return sent;
+    }
+
+    private boolean eventEnabled(String eventType, NotificationSettings settings) {
+        return switch (eventType) {
+            case NotificationEventTypes.DELAY -> Boolean.TRUE.equals(settings.getDelayAlert());
+            case NotificationEventTypes.ROUTE_DEVIATION -> Boolean.TRUE.equals(settings.getRouteChangeAlert());
+            case NotificationEventTypes.SAFE_ZONE_ENTRY, NotificationEventTypes.SAFE_ZONE_EXIT ->
+                    Boolean.TRUE.equals(settings.getArrivalAlert());
+            case NotificationEventTypes.INACTIVITY -> Boolean.TRUE.equals(settings.getInactivityAlert());
+            default -> true;
+        };
     }
 
     public boolean smsAvailable() {
