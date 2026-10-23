@@ -73,13 +73,10 @@ public class AuthValidationService {
             return null;
         }
         String digits = onlyDigits(phone);
-        if (digits.length() < 10 || digits.length() > 15) {
+        if (!digits.matches("3\\d{9}")) {
             throw new IllegalArgumentException("Ingresa un teléfono válido");
         }
-        if (digits.startsWith("57") && digits.length() == 12) {
-            return "+57 " + digits.substring(2);
-        }
-        return "+" + digits;
+        return digits;
     }
 
     public void validatePhoneAvailable(String phone) {

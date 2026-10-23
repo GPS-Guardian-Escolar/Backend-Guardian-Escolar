@@ -179,6 +179,9 @@ public class AuthService {
         validationService.validatePasswordPolicy(request.newPassword());
         User user = currentUserService.currentUser();
         validationService.validateCurrentPassword(user, request.currentPassword());
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente de la actual");
+        }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");

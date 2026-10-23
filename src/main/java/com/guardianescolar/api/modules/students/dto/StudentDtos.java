@@ -20,7 +20,7 @@ public final class StudentDtos {
 
     public record StudentRequest(
             UUID userId,
-            @NotBlank @Size(min = 2, max = 100) String fullName,
+            @NotBlank @Size(min = 2, max = 80) @Pattern(regexp = "^[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
             @NotNull SchoolGrade schoolGrade,
             @NotNull @Past LocalDate birthDate,
             @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData) {

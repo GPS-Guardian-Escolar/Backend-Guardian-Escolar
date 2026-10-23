@@ -78,7 +78,9 @@ public class TwoFactorService {
             }
             return;
         }
-        emailService.enviarCodeDosFactores(user.getEmail(), user.getTwoFactorCode());
+        if (!emailService.enviarCodeDosFactores(user.getEmail(), user.getTwoFactorCode())) {
+            throw new IllegalStateException("Email delivery is not configured");
+        }
     }
 
     private void validateCode(User user, String code) {
