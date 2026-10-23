@@ -57,6 +57,11 @@ public final class StudentDtos {
             OffsetDateTime createdAt) {
     }
 
+    public record ShareStudentResponse(
+            LinkedGuardianResponse guardian,
+            boolean emailSent) {
+    }
+
     public record LinkDeviceRequest(
             UUID studentId,
             @NotBlank @Size(min = 6, max = 20) String code,

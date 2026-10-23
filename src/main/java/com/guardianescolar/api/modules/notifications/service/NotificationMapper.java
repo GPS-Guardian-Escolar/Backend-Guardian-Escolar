@@ -34,6 +34,7 @@ public class NotificationMapper {
                 notification.getWasSent(),
                 receipt.getWasRead(),
                 receipt.getReceivedAt(),
-                receipt.getReadAt());
+                receipt.getReadAt(),
+                notification.getTrip() == null ? null : notification.getTrip().getId());
     }
 }

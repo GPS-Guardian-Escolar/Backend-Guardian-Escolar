@@ -120,8 +120,13 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDtos.LinkedGuardianResponse share(UUID studentId, StudentDtos.ShareStudentRequest request) {
+    public StudentDtos.ShareStudentResponse share(UUID studentId, StudentDtos.ShareStudentRequest request) {
         return studentGuardianService.share(getManageable(studentId), request);
+    }
+
+    @Transactional
+    public void revokeGuardian(UUID studentId, UUID guardianUserId) {
+        studentGuardianService.revoke(getManageable(studentId), guardianUserId);
     }
 
     @Transactional(readOnly = true)

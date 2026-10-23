@@ -77,10 +77,19 @@ public class StudentController {
 
     @PostMapping("/{studentId}/guardians")
     @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
-    public StudentDtos.LinkedGuardianResponse share(
+    public StudentDtos.ShareStudentResponse share(
             @PathVariable UUID studentId,
             @Valid @RequestBody StudentDtos.ShareStudentRequest request) {
         return studentService.share(studentId, request);
+    }
+
+    @DeleteMapping("/{studentId}/guardians/{guardianUserId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
+    public void revokeGuardian(
+            @PathVariable UUID studentId,
+            @PathVariable UUID guardianUserId) {
+        studentService.revokeGuardian(studentId, guardianUserId);
     }
 
     @PostMapping("/link-device")

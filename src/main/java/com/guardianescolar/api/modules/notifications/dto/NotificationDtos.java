@@ -20,7 +20,8 @@ public final class NotificationDtos {
             Boolean wasSent,
             Boolean wasRead,
             OffsetDateTime receivedAt,
-            OffsetDateTime readAt) {
+            OffsetDateTime readAt,
+            UUID tripId) {
     }
 
     public record NotificationSettingsResponse(
