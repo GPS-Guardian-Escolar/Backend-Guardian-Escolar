@@ -42,9 +42,6 @@ public class Coordinate {
     @Column(name = "recorded_at", nullable = false)
     private OffsetDateTime recordedAt;
 
-    @Column(name = "speed_kmh", precision = 5, scale = 1)
-    private BigDecimal speedKmh;
-
     @Column(name = "stopped_seconds")
     private Integer stoppedSeconds = 0;
 

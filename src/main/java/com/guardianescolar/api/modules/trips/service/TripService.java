@@ -103,7 +103,6 @@ public class TripService {
         coordinate.setLatitude(request.latitude());
         coordinate.setLongitude(request.longitude());
         coordinate.setRecordedAt(request.recordedAt() == null ? OffsetDateTime.now() : request.recordedAt());
-        coordinate.setSpeedKmh(request.speedKmh());
         coordinate.setStoppedSeconds(request.stoppedSeconds() == null ? 0 : request.stoppedSeconds());
         List<Coordinate> recentCoordinates = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(tripId);
         Coordinate previous = recentCoordinates.stream().findFirst().orElse(null);
