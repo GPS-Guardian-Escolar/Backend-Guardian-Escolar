@@ -3,6 +3,7 @@ package com.guardianescolar.api.modules.students.dto;
 import com.guardianescolar.api.modules.students.domain.SchoolGrade;
 import com.guardianescolar.api.modules.routes.dto.RouteDtos;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -23,7 +24,8 @@ public final class StudentDtos {
             @NotBlank @Size(min = 3, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{3})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
             @NotNull SchoolGrade schoolGrade,
             @NotNull @Past LocalDate birthDate,
-            @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData) {
+            @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData,
+            @NotNull @Valid EmergencyContactDtos.EmergencyContactRequest emergencyContact) {
     }
 
     public record StudentResponse(
