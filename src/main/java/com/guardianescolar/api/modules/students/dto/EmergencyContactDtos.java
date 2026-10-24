@@ -12,7 +12,7 @@ public final class EmergencyContactDtos {
 
     public record EmergencyContactRequest(
             @NotBlank @Size(min = 3, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{3})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
-            @NotBlank @Pattern(regexp = "^(?!(\\d)\\1{9}$)3\\d{9}$", message = "teléfono debe ser un celular colombiano válido de 10 dígitos") String phone,
+            @NotBlank @Pattern(regexp = "^(?!.*(\\d)\\1{5})3\\d{9}$", message = "teléfono debe ser un celular colombiano válido de 10 dígitos") String phone,
             @Size(max = 50) String relationship,
             Boolean isPrimary) {
     }

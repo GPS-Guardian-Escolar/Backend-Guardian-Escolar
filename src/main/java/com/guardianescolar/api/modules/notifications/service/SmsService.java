@@ -39,7 +39,9 @@ public class SmsService {
     }
 
     public boolean isAvailable() {
-        return enabled && providerUrl != null && !providerUrl.isBlank();
+        return enabled
+                && providerUrl != null && !providerUrl.isBlank()
+                && apiKey != null && !apiKey.isBlank();
     }
 
     public boolean send(String phone, String message) {
@@ -49,7 +51,7 @@ public class SmsService {
             return false;
         }
         if (!isAvailable()) {
-            LOGGER.info("SMS disabled. Recipient: {}, message: {}", normalizedPhone, message);
+            LOGGER.info("SMS skipped because the provider is disabled or not fully configured.");
             return false;
         }
 

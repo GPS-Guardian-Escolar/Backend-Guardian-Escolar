@@ -23,13 +23,19 @@ class RegistrationValidationTest {
 
     @Test
     void rejectsExcessiveOrRepeatedNames() {
+        assertFalse(valid("A", "3001234567"));
+        assertFalse(valid("An", "3001234567"));
         assertFalse(valid("A".repeat(61), "3001234567"));
         assertFalse(valid("Annnna", "3001234567"));
+        assertFalse(valid("Ana123", "3001234567"));
     }
 
     @Test
     void rejectsFakePhoneNumber() {
         assertFalse(valid("Ana María", "3333333333"));
         assertFalse(valid("Ana María", "4444444444"));
+        assertFalse(valid("Ana María", "3222222222"));
+        assertFalse(valid("Ana María", "3777777777"));
+        assertTrue(valid("Ana María", "3221234567"));
     }
 }

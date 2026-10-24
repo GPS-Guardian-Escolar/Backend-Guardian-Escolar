@@ -149,6 +149,7 @@ public class AuthService {
         user.setPasswordResetToken(null);
         user.setPasswordResetExpiresAt(null);
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
     }
 
@@ -182,6 +183,7 @@ public class AuthService {
         user.setEmailVerificationToken(generateToken());
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         User saved = userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         emailService.enviarVerificacionEmail(saved.getEmail(), saved.getEmailVerificationToken(), null);
         return userMapper.toUserResponse(saved);
     }
@@ -196,6 +198,7 @@ public class AuthService {
         }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
     }
 

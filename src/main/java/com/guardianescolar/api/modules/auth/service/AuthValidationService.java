@@ -73,7 +73,7 @@ public class AuthValidationService {
             return null;
         }
         String digits = onlyDigits(phone);
-        if (!digits.matches("3\\d{9}")) {
+        if (!digits.matches("3\\d{9}") || digits.matches(".*(\\d)\\1{5}.*")) {
             throw new IllegalArgumentException("Ingresa un teléfono válido");
         }
         return digits;
