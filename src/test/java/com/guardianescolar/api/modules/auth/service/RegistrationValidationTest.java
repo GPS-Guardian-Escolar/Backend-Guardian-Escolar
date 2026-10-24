@@ -36,6 +36,11 @@ class RegistrationValidationTest {
         assertFalse(valid("Ana María", "4444444444"));
         assertFalse(valid("Ana María", "3222222222"));
         assertFalse(valid("Ana María", "3777777777"));
+        assertFalse(valid("Ana María", "3000000000"));
+        assertFalse(valid("Ana María", "3999999999"));
+        assertFalse(valid("Ana María", "3444444444"));
+        assertFalse(valid("Ana María", "3455555555"));
+        assertFalse(valid("Ana María", "3111111111"));
         assertTrue(valid("Ana María", "3221234567"));
     }
 }
