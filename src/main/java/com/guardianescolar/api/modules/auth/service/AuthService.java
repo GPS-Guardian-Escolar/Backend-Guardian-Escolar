@@ -141,6 +141,9 @@ public class AuthService {
         User user = userRepository.findByPasswordResetToken(request.token())
                 .orElseThrow(() -> new IllegalArgumentException("Token de restablecimiento inválido"));
         validatePasswordResetToken(user);
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseÃ±a debe ser diferente de la actual");
+        }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         user.setPasswordResetToken(null);

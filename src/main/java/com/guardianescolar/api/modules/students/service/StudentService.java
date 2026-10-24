@@ -56,7 +56,9 @@ public class StudentService {
     public StudentDtos.StudentResponse create(StudentDtos.StudentRequest request) {
         User current = currentUserService.currentUser();
         Student student = new Student();
-        student.setUser(resolveOwner(request.userId(), current));
+        User owner = resolveOwner(request.userId(), current);
+        validateUniqueName(owner, request.fullName(), null);
+        student.setUser(owner);
         applyData(student, request);
         student.setIsActive(true);
         student.setCreatedBy(current);
@@ -70,6 +72,7 @@ public class StudentService {
         if (currentUserService.isAdmin(current) && request.userId() != null) {
             student.setUser(findOwner(request.userId()));
         }
+        validateUniqueName(student.getUser(), request.fullName(), student.getId());
         applyData(student, request);
         student.setUpdatedBy(current);
         return studentMapper.toResponse(studentRepository.save(student));
@@ -217,5 +220,16 @@ public class StudentService {
     private User findOwner(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner user not found"));
+    }
+
+    private void validateUniqueName(User owner, String fullName, UUID excludedStudentId) {
+        String normalizedName = fullName.trim().replaceAll("\\s+", " ");
+        boolean exists = excludedStudentId == null
+                ? studentRepository.existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNull(owner.getId(), normalizedName)
+                : studentRepository.existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNullAndIdNot(
+                        owner.getId(), normalizedName, excludedStudentId);
+        if (exists) {
+            throw new IllegalArgumentException("Ya existe un estudiante con ese nombre en esta cuenta");
+        }
     }
 }

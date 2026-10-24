@@ -16,12 +16,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import java.time.OffsetDateTime;
 
 class AuthProfileAndRecoveryTest {
     private UserRepository userRepository;
     private EmailService emailService;
     private CurrentUserService currentUserService;
     private AuthValidationService validationService;
+    private PasswordEncoder passwordEncoder;
     private AuthService authService;
 
     @BeforeEach
@@ -30,11 +32,25 @@ class AuthProfileAndRecoveryTest {
         emailService = mock(EmailService.class);
         currentUserService = mock(CurrentUserService.class);
         validationService = mock(AuthValidationService.class);
+        passwordEncoder = mock(PasswordEncoder.class);
         authService = new AuthService(userRepository, mock(NotificationSettingsRepository.class),
-                mock(PasswordEncoder.class), mock(JwtService.class), mock(AuthenticationManager.class),
+                passwordEncoder, mock(JwtService.class), mock(AuthenticationManager.class),
                 emailService, currentUserService, validationService, mock(AuthUserMapper.class),
                 mock(RoleProvisioningService.class), mock(DeviceSessionService.class),
                 mock(TwoFactorService.class));
+    }
+
+    @Test
+    void passwordResetRejectsTheCurrentPassword() {
+        User user = new User();
+        user.setPasswordHash("encoded-current");
+        user.setPasswordResetExpiresAt(OffsetDateTime.now().plusMinutes(5));
+        when(userRepository.findByPasswordResetToken("valid-token")).thenReturn(java.util.Optional.of(user));
+        when(passwordEncoder.matches("SamePassword1!", "encoded-current")).thenReturn(true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.restablecerPassword(new AuthDtos.ResetPasswordRequest("valid-token", "SamePassword1!")));
+        verify(userRepository, never()).save(user);
     }
 
     @Test
