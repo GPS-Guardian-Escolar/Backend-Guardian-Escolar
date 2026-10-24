@@ -136,4 +136,16 @@ class StudentTransactionTest {
                     .anyMatch(error -> error.getPropertyPath().toString().equals("emergencyContact.fullName")));
         }
     }
+
+    @Test
+    void requestValidationRejectsRepeatedStudentAndContactNames() {
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            var invalidStudent = request("aaa", "Ana Perez");
+            var invalidContact = request("Ana Perez", "bbb");
+            assertTrue(factory.getValidator().validate(invalidStudent).stream()
+                    .anyMatch(error -> error.getPropertyPath().toString().equals("fullName")));
+            assertTrue(factory.getValidator().validate(invalidContact).stream()
+                    .anyMatch(error -> error.getPropertyPath().toString().equals("emergencyContact.fullName")));
+        }
+    }
 }

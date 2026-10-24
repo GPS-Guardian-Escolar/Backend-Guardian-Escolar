@@ -86,4 +86,17 @@ class AuthProfileAndRecoveryTest {
 
         verify(userRepository, never()).save(org.mockito.ArgumentMatchers.any(User.class));
     }
+
+    @Test
+    void profileUpdateUsesColombianPhoneValidationAndNormalization() {
+        User user = new User();
+        when(currentUserService.currentUser()).thenReturn(user);
+        when(validationService.normalizePhone("+57 300 123 4567")).thenReturn("3001234567");
+        when(userRepository.save(user)).thenReturn(user);
+
+        authService.actualizarPerfil(new AuthDtos.UpdateProfileRequest("Ana Gomez", "+57 300 123 4567"));
+
+        assertEquals("3001234567", user.getPhone());
+        verify(validationService).normalizePhone("+57 300 123 4567");
+    }
 }

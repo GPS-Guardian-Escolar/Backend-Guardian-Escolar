@@ -157,7 +157,7 @@ public class AuthService {
     public AuthDtos.UserResponse actualizarPerfil(AuthDtos.UpdateProfileRequest request) {
         User user = currentUserService.currentUser();
         user.setFullName(request.fullName().trim());
-        user.setPhone(validationService.normalizeOptionalText(request.phone()));
+        user.setPhone(validationService.normalizePhone(request.phone()));
         return userMapper.toUserResponse(userRepository.save(user));
     }
 

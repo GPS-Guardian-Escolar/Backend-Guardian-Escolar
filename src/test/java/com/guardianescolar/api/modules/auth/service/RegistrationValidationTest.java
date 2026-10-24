@@ -27,6 +27,8 @@ class RegistrationValidationTest {
         assertFalse(valid("An", "3001234567"));
         assertFalse(valid("A".repeat(61), "3001234567"));
         assertFalse(valid("Annnna", "3001234567"));
+        assertFalse(valid("aaa", "3001234567"));
+        assertTrue(valid("Alberto", "3001234567"));
         assertFalse(valid("Ana123", "3001234567"));
     }
 
