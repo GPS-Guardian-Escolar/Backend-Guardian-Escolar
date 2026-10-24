@@ -73,8 +73,8 @@ public class AuthValidationService {
             return null;
         }
         String digits = onlyDigits(phone);
-        if (!digits.matches("3\\d{9}") || digits.matches(".*(\\d)\\1{5}.*")) {
-            throw new IllegalArgumentException("Ingresa un teléfono válido");
+        if (!digits.matches("3\\d{9}") || digits.matches(".*(\\d)\\1{4}.*")) {
+            throw new IllegalArgumentException("El celular debe tener 10 dígitos, comenzar por 3 y no repetir cinco o más dígitos seguidos");
         }
         return digits;
     }
