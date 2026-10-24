@@ -16,9 +16,9 @@ public final class AuthDtos {
     }
 
     public record RegisterRequest(
-            @NotBlank @Size(min = 2, max = 80) @Pattern(regexp = "^[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
+            @NotBlank @Size(min = 2, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{3})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
             @NotBlank @Email @Size(max = 100) String email,
-            @Pattern(regexp = "^$|^3\\d{9}$", message = "El celular debe tener 10 dígitos y comenzar por 3") String phone,
+            @Pattern(regexp = "^$|^(?!(\\d)\\1{9}$)3\\d{9}$", message = "El celular debe tener 10 dígitos y comenzar por 3") String phone,
             @NotBlank @Size(min = 8, max = 128) String password,
             @NotNull @AssertTrue(message = "Debe aceptar los términos y condiciones") Boolean termsAccepted,
             @Size(max = 20) String termsVersion,
@@ -44,8 +44,8 @@ public final class AuthDtos {
     }
 
     public record UpdateProfileRequest(
-            @NotBlank @Size(min = 2, max = 80) @Pattern(regexp = "^[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
-            @Pattern(regexp = "^$|^3\\d{9}$", message = "El celular debe tener 10 dígitos y comenzar por 3") String phone) {
+            @NotBlank @Size(min = 2, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{3})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras") String fullName,
+            @Pattern(regexp = "^$|^(?!(\\d)\\1{9}$)3\\d{9}$", message = "El celular debe tener 10 dígitos y comenzar por 3") String phone) {
     }
 
     public record ChangeEmailRequest(

@@ -19,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import com.guardianescolar.api.modules.auth.service.EmailUnavailableException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,6 +128,12 @@ public class ApiExceptionHandler {
         LOGGER.error("Fallo del proveedor de correo provider={}, status={}, route={}",
                 exception.provider(), exception.providerStatus(), request.getRequestURI(), exception);
         return build(HttpStatus.BAD_GATEWAY, "No se pudo enviar el correo. Intenta nuevamente más tarde.");
+    }
+
+    @ExceptionHandler(EmailUnavailableException.class)
+    public ResponseEntity<ApiError> handleEmailUnavailable(EmailUnavailableException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
     }
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message) {

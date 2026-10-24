@@ -29,6 +29,10 @@ public class EmailService {
     @Value("${guardian.mail.provider:smtp}")
     private String mailProvider;
 
+    public boolean isAvailable() {
+        return mailEnabled;
+    }
+
     public void enviarVerificacionEmail(String recipient, String token, String returnUrl) {
         String url = emailLinkService.emailVerificationUrl(token, returnUrl);
         enviar(

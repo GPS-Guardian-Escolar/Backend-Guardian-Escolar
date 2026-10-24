@@ -48,6 +48,9 @@ public class AuthService {
         if (!Boolean.TRUE.equals(request.termsAccepted())) {
             throw new IllegalArgumentException("Debe aceptar los términos y condiciones");
         }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
 
         User user = new User();
         user.setFullName(request.fullName().trim());
@@ -118,6 +121,9 @@ public class AuthService {
 
     @Transactional
     public AuthDtos.MessageResponse solicitarRestablecimiento(AuthDtos.PasswordRecoveryRequest request) {
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
         userRepository.findByEmailIgnoreCase(validationService.normalizeEmail(request.email()))
                 .filter(User::getIsActive)
                 .ifPresent(user -> {
@@ -163,6 +169,9 @@ public class AuthService {
         }
         if (!changedEmail) {
             return userMapper.toUserResponse(user);
+        }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
         }
 
         user.setEmail(newEmail);
