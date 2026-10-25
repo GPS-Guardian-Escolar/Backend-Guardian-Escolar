@@ -26,16 +26,20 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 ## Validacion esperada
 
 ```bash
-./mvnw test
+./mvnw --batch-mode clean verify
 ```
 
-Resultado esperado:
+El resultado esperado es `BUILD SUCCESS` y cero fallos. La cantidad de pruebas puede cambiar cuando se agregan regresiones; no se debe fijar un numero historico en la documentacion. Para consultar el resumen real de Maven:
 
-```text
-Tests run: 3
-Failures: 0
-BUILD SUCCESS
+```powershell
+Get-ChildItem target\surefire-reports\*.txt | Get-Content | Select-String "Tests run"
 ```
+
+Si el entorno local no tiene Docker/PostgreSQL disponible, ejecuta al menos la fase de compilacion y documenta la limitacion; no presentes una ejecucion parcial como prueba completa.
+
+## Imagen Docker
+
+El Dockerfile compila el artefacto con `-DskipTests` para separar la construccion de la imagen de la puerta de calidad. Las pruebas deben ejecutarse antes, mediante `./mvnw --batch-mode clean verify` o el workflow de CI. Una imagen construida correctamente no demuestra por si sola que las pruebas hayan pasado.
 
 ## Google Maps Platform
 
