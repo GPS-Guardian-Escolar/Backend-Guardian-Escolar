@@ -4,6 +4,7 @@ import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.Notification;
 import com.guardianescolar.api.modules.notifications.domain.NotificationReceipt;
 import com.guardianescolar.api.modules.notifications.domain.NotificationSettings;
+import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.repository.NotificationReceiptRepository;
 import com.guardianescolar.api.modules.notifications.repository.NotificationRepository;
@@ -14,6 +15,7 @@ import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
 import java.util.List;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
+    private static final int INACTIVITY_DEDUPLICATION_MINUTES = 5;
 
     private final NotificationRepository notificationRepository;
     private final NotificationReceiptRepository notificationReceiptRepository;
@@ -89,6 +93,12 @@ public class NotificationService {
             User user,
             String eventType,
             String message) {
+        if (NotificationEventTypes.INACTIVITY.equals(eventType)
+                && notificationRepository.existsByTripIdAndEventTypeAndEventDateTimeAfter(
+                        trip.getId(), eventType,
+                        OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES))) {
+            return;
+        }
         Notification notification = saveNotification(trip, safeZone, eventType, message);
         saveReceipt(notification, user);
 
