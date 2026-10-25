@@ -1,7 +1,6 @@
 package com.guardianescolar.api.modules.auth.service;
 
 import com.guardianescolar.api.modules.auth.dto.AuthDtos;
-import com.guardianescolar.api.modules.notifications.service.SmsService;
 import com.guardianescolar.api.modules.security.domain.TwoFactorMethods;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
@@ -20,13 +19,12 @@ public class TwoFactorService {
 
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private final SmsService smsService;
     private final AuthValidationService validationService;
 
     public void prepareAndSend(User user, String method) {
         prepareCode(user, method);
         userRepository.save(user);
-        sendCode(user, method);
+        sendCode(user);
     }
 
     public AuthDtos.TwoFactorChallengeResponse request(User user, String method) {
@@ -71,13 +69,7 @@ public class TwoFactorService {
         user.setTwoFactorExpiresAt(OffsetDateTime.now().plusMinutes(TWO_FACTOR_EXPIRATION_MINUTES));
     }
 
-    private void sendCode(User user, String method) {
-        if (TwoFactorMethods.SMS.equalsIgnoreCase(method)) {
-            if (!smsService.send(user.getPhone(), "Your GPS Guardian Escolar code is: " + user.getTwoFactorCode())) {
-                throw new IllegalStateException("Could not send the SMS code");
-            }
-            return;
-        }
+    private void sendCode(User user) {
         if (!emailService.enviarCodeDosFactores(user.getEmail(), user.getTwoFactorCode())) {
             throw new EmailUnavailableException();
         }

@@ -59,7 +59,7 @@ public final class AuthDtos {
     }
 
     public record RequestTwoFactorRequest(
-            @NotBlank @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL o SMS") String method) {
+            @NotBlank @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL") String method) {
     }
 
     public record ResendTwoFactorRequest(
@@ -69,7 +69,7 @@ public final class AuthDtos {
     public record VerifyTwoFactorRequest(
             @NotBlank String token,
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "código debe tener 6 dígitos") String code,
-            @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL o SMS") String method,
+            @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL") String method,
             @NotBlank @Size(max = 120) String deviceIdentifier,
             @NotBlank @Size(max = 120) String deviceName,
             @NotBlank @Size(max = 30) String platform,

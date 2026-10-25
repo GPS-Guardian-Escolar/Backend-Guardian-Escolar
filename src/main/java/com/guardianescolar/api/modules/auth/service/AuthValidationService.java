@@ -96,15 +96,13 @@ public class AuthValidationService {
     }
 
     public String normalizeTwoFactorMethod(String method) {
-        if (method == null || method.isBlank()) {
-            return TwoFactorMethods.EMAIL;
-        }
-        return method.trim().toUpperCase();
+        // Existing accounts keep two-factor protection when the retired method is encountered.
+        return TwoFactorMethods.EMAIL;
     }
 
     public void validateTwoFactorMethodAvailable(User user, String method) {
-        if (TwoFactorMethods.SMS.equalsIgnoreCase(method) && normalizeOptionalText(user.getPhone()) == null) {
-            throw new IllegalArgumentException("Debes registrar un teléfono para activar 2FA por SMS");
+        if (normalizeOptionalText(user.getEmail()) == null) {
+            throw new IllegalArgumentException("Email is required for two-factor authentication");
         }
     }
 

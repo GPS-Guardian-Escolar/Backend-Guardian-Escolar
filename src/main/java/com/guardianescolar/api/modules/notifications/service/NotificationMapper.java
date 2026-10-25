@@ -10,17 +10,14 @@ import org.springframework.stereotype.Component;
 public class NotificationMapper {
 
     public NotificationDtos.NotificationSettingsResponse toSettingsResponse(
-            NotificationSettings settings,
-            boolean smsAvailable) {
+            NotificationSettings settings) {
         return new NotificationDtos.NotificationSettingsResponse(
                 settings.getDelayAlert(),
                 settings.getRouteChangeAlert(),
                 settings.getArrivalAlert(),
                 settings.getInactivityAlert(),
                 settings.getPushChannel(),
-                settings.getEmailChannel(),
-                settings.getSmsChannel(),
-                smsAvailable);
+                settings.getEmailChannel());
     }
 
     public NotificationDtos.NotificationResponse toResponse(NotificationReceipt receipt) {

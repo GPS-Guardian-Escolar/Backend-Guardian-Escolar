@@ -30,9 +30,7 @@ public final class NotificationDtos {
             Boolean arrivalAlert,
             Boolean inactivityAlert,
             Boolean pushChannel,
-            Boolean emailChannel,
-            Boolean smsChannel,
-            Boolean smsAvailable) {
+            Boolean emailChannel) {
     }
 
     public record UpdateNotificationSettingsRequest(
@@ -41,8 +39,7 @@ public final class NotificationDtos {
             Boolean arrivalAlert,
             Boolean inactivityAlert,
             Boolean pushChannel,
-            Boolean emailChannel,
-            Boolean smsChannel) {
+            Boolean emailChannel) {
     }
 
     public record DeviceRequest(
