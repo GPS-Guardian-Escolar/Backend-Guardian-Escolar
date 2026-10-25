@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.routes.service.RouteService;
 import com.guardianescolar.api.modules.routes.dto.RouteDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/routes")
 @RequiredArgsConstructor
+@Tag(name = "Routes", description = "School routes and stops")
 public class RouteController {
 
     private final RouteService routeService;

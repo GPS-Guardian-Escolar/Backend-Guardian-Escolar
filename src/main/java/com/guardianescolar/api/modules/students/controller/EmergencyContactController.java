@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.students.service.EmergencyContactService;
 import com.guardianescolar.api.modules.students.dto.EmergencyContactDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/students/{studentId}/emergency-contacts")
 @RequiredArgsConstructor
+@Tag(name = "Emergency contacts", description = "Emergency contacts associated with students")
 public class EmergencyContactController {
 
     private final EmergencyContactService emergencyContactService;

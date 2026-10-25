@@ -2,6 +2,7 @@ package com.guardianescolar.api.modules.admin.controller;
 
 import com.guardianescolar.api.modules.admin.dto.AdminDtos;
 import com.guardianescolar.api.modules.admin.service.AdminService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Administration", description = "Administrative dashboards, alerts and audit data")
 public class AdminController {
 
     private final AdminService adminService;

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import com.guardianescolar.api.modules.auth.service.AuthService;
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.auth.dto.AuthDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Registration, login, verification and account security")
 public class AuthController {
 
     private final AuthService authService;

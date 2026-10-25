@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/students")
 @RequiredArgsConstructor
+@Tag(name = "Students", description = "Student records and device linking")
 public class StudentController {
 
     private final StudentService studentService;

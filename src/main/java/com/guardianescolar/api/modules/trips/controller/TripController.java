@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.trips.service.TripService;
 import com.guardianescolar.api.modules.trips.dto.TripDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/trips")
 @RequiredArgsConstructor
+@Tag(name = "Trips", description = "GPS trips, coordinates and status")
 public class TripController {
 
     private final TripService tripService;

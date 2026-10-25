@@ -2,6 +2,7 @@ package com.guardianescolar.api.modules.notifications.controller;
 
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.service.UserDeviceService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/devices")
 @RequiredArgsConstructor
+@Tag(name = "User devices", description = "Push notification device registration")
 public class UserDeviceController {
 
     private final UserDeviceService userDeviceService;

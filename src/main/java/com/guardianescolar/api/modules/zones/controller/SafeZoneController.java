@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.zones.service.SafeZoneService;
 import com.guardianescolar.api.modules.zones.dto.SafeZoneDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/safe-zones")
 @RequiredArgsConstructor
+@Tag(name = "Safe zones", description = "Safe-zone configuration and alerts")
 public class SafeZoneController {
 
     private final SafeZoneService safeZoneService;
