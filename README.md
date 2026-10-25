@@ -23,6 +23,19 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
 
+## Dependencia de base de datos
+
+La API no crea el esquema PostgreSQL por sí sola. El esquema, roles, índices y datos iniciales
+se administran en `DB-Structure-Guardian-Escolar` mediante Liquibase. En un entorno local, el
+orden soportado es:
+
+1. Iniciar PostgreSQL.
+2. Ejecutar Liquibase con el changelog de la base de datos.
+3. Iniciar esta API con `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` apuntando a esa base.
+
+El compose recomendado del repositorio `Docker-Infra-Guardian-Escolar` automatiza ese orden y
+espera a que Liquibase termine antes de iniciar el backend.
+
 ## Validacion esperada
 
 ```bash
