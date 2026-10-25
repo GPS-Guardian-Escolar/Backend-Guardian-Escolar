@@ -16,9 +16,9 @@ public final class AuthDtos {
     }
 
     public record RegisterRequest(
-            @NotBlank @Size(min = 2, max = 100) String fullName,
+            @NotBlank @Size(min = 3, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{2})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras y no repetir caracteres de forma excesiva") String fullName,
             @NotBlank @Email @Size(max = 100) String email,
-            @Size(max = 30) @Pattern(regexp = "^$|^[+0-9 ()-]{7,30}$", message = "teléfono debe tener un formato válido") String phone,
+            @Pattern(regexp = "^$|^(?!.*(\\d)\\1{4})3\\d{9}$", message = "El celular debe tener 10 dígitos, comenzar por 3 y no repetir cinco o más dígitos seguidos") String phone,
             @NotBlank @Size(min = 8, max = 128) String password,
             @NotNull @AssertTrue(message = "Debe aceptar los términos y condiciones") Boolean termsAccepted,
             @Size(max = 20) String termsVersion,
@@ -44,8 +44,8 @@ public final class AuthDtos {
     }
 
     public record UpdateProfileRequest(
-            @NotBlank @Size(min = 2, max = 100) String fullName,
-            @Size(max = 30) @Pattern(regexp = "^$|^[+0-9 ()-]{7,30}$", message = "teléfono debe tener un formato válido") String phone) {
+            @NotBlank @Size(min = 3, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{2})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras y no repetir caracteres de forma excesiva") String fullName,
+            @Pattern(regexp = "^$|^(?!.*(\\d)\\1{4})3\\d{9}$", message = "El celular debe tener 10 dígitos, comenzar por 3 y no repetir cinco o más dígitos seguidos") String phone) {
     }
 
     public record ChangeEmailRequest(
@@ -59,7 +59,7 @@ public final class AuthDtos {
     }
 
     public record RequestTwoFactorRequest(
-            @NotBlank @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL o SMS") String method) {
+            @NotBlank @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL") String method) {
     }
 
     public record ResendTwoFactorRequest(
@@ -69,7 +69,7 @@ public final class AuthDtos {
     public record VerifyTwoFactorRequest(
             @NotBlank String token,
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "código debe tener 6 dígitos") String code,
-            @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL o SMS") String method,
+            @Pattern(regexp = TwoFactorMethods.REGEX, message = "método debe ser EMAIL") String method,
             @NotBlank @Size(max = 120) String deviceIdentifier,
             @NotBlank @Size(max = 120) String deviceName,
             @NotBlank @Size(max = 30) String platform,

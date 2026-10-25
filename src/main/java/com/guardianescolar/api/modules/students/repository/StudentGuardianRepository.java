@@ -14,6 +14,9 @@ public interface StudentGuardianRepository extends JpaRepository<StudentGuardian
 
     Optional<StudentGuardian> findByStudentIdAndUserIdAndDeletedAtIsNull(UUID studentId, UUID userId);
 
+    Optional<StudentGuardian> findByStudentIdAndUserIdAndStatusAndDeletedAtIsNull(
+            UUID studentId, UUID userId, String status);
+
     boolean existsByStudentIdAndUserIdAndStatusAndDeletedAtIsNull(UUID studentId, UUID userId, String status);
 
     long countByStudentIdAndStatusAndDeletedAtIsNull(UUID studentId, String status);

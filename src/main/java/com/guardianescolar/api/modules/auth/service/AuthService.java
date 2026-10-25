@@ -48,6 +48,9 @@ public class AuthService {
         if (!Boolean.TRUE.equals(request.termsAccepted())) {
             throw new IllegalArgumentException("Debe aceptar los términos y condiciones");
         }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
 
         User user = new User();
         user.setFullName(request.fullName().trim());
@@ -118,6 +121,9 @@ public class AuthService {
 
     @Transactional
     public AuthDtos.MessageResponse solicitarRestablecimiento(AuthDtos.PasswordRecoveryRequest request) {
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
         userRepository.findByEmailIgnoreCase(validationService.normalizeEmail(request.email()))
                 .filter(User::getIsActive)
                 .ifPresent(user -> {
@@ -135,11 +141,15 @@ public class AuthService {
         User user = userRepository.findByPasswordResetToken(request.token())
                 .orElseThrow(() -> new IllegalArgumentException("Token de restablecimiento inválido"));
         validatePasswordResetToken(user);
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseÃ±a debe ser diferente de la actual");
+        }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         user.setPasswordResetToken(null);
         user.setPasswordResetExpiresAt(null);
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
     }
 
@@ -147,7 +157,7 @@ public class AuthService {
     public AuthDtos.UserResponse actualizarPerfil(AuthDtos.UpdateProfileRequest request) {
         User user = currentUserService.currentUser();
         user.setFullName(request.fullName().trim());
-        user.setPhone(validationService.normalizeOptionalText(request.phone()));
+        user.setPhone(validationService.normalizePhone(request.phone()));
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
@@ -164,12 +174,16 @@ public class AuthService {
         if (!changedEmail) {
             return userMapper.toUserResponse(user);
         }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
 
         user.setEmail(newEmail);
         user.setEmailVerified(false);
         user.setEmailVerificationToken(generateToken());
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         User saved = userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         emailService.enviarVerificacionEmail(saved.getEmail(), saved.getEmailVerificationToken(), null);
         return userMapper.toUserResponse(saved);
     }
@@ -179,8 +193,12 @@ public class AuthService {
         validationService.validatePasswordPolicy(request.newPassword());
         User user = currentUserService.currentUser();
         validationService.validateCurrentPassword(user, request.currentPassword());
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente de la actual");
+        }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
     }
 

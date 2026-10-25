@@ -94,6 +94,23 @@ class DeviceSessionServiceTest {
         assertFalse(pending.getEmailConfirmed());
     }
 
+    @Test
+    void revokingUserSessionsClosesEveryActiveSession() {
+        User user = user();
+        UserSession first = activeSession("first-device");
+        UserSession second = activeSession("second-device");
+        when(repository.findByUserIdAndSessionStatus(user.getId(), SessionStatus.ACTIVE))
+                .thenReturn(List.of(first, second));
+
+        service.revokeAllSessions(user);
+
+        assertEquals(SessionStatus.CLOSED, first.getSessionStatus());
+        assertEquals(SessionStatus.CLOSED, second.getSessionStatus());
+        assertTrue(first.getSessionEndedAt() != null);
+        assertTrue(second.getSessionEndedAt() != null);
+        verify(repository).flush();
+    }
+
     private User user() {
         User user = new User();
         user.setId(UUID.randomUUID());

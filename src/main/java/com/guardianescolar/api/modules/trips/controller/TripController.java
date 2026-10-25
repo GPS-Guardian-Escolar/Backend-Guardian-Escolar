@@ -39,7 +39,7 @@ public class TripController {
     }
 
     @PatchMapping("/{tripId}/status")
-    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
     public TripDtos.TripResponse changeStatus(
             @PathVariable UUID tripId,
             @Valid @RequestBody TripDtos.ChangeStatusRequest request) {

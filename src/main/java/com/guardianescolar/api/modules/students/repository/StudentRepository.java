@@ -13,4 +13,8 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     List<Student> findByUserEmailIgnoreCaseAndDeletedAtIsNullOrderByFullNameAsc(String email);
 
     Optional<Student> findByIdAndDeletedAtIsNull(UUID id);
+
+    boolean existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNull(UUID userId, String fullName);
+
+    boolean existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNullAndIdNot(UUID userId, String fullName, UUID id);
 }

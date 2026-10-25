@@ -73,13 +73,10 @@ public class AuthValidationService {
             return null;
         }
         String digits = onlyDigits(phone);
-        if (digits.length() < 10 || digits.length() > 15) {
-            throw new IllegalArgumentException("Ingresa un teléfono válido");
+        if (!digits.matches("3\\d{9}") || digits.matches(".*(\\d)\\1{4}.*")) {
+            throw new IllegalArgumentException("El celular debe tener 10 dígitos, comenzar por 3 y no repetir cinco o más dígitos seguidos");
         }
-        if (digits.startsWith("57") && digits.length() == 12) {
-            return "+57 " + digits.substring(2);
-        }
-        return "+" + digits;
+        return digits;
     }
 
     public void validatePhoneAvailable(String phone) {
@@ -99,15 +96,13 @@ public class AuthValidationService {
     }
 
     public String normalizeTwoFactorMethod(String method) {
-        if (method == null || method.isBlank()) {
-            return TwoFactorMethods.EMAIL;
-        }
-        return method.trim().toUpperCase();
+        // Existing accounts keep two-factor protection when the retired method is encountered.
+        return TwoFactorMethods.EMAIL;
     }
 
     public void validateTwoFactorMethodAvailable(User user, String method) {
-        if (TwoFactorMethods.SMS.equalsIgnoreCase(method) && normalizeOptionalText(user.getPhone()) == null) {
-            throw new IllegalArgumentException("Debes registrar un teléfono para activar 2FA por SMS");
+        if (normalizeOptionalText(user.getEmail()) == null) {
+            throw new IllegalArgumentException("Email is required for two-factor authentication");
         }
     }
 

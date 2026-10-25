@@ -20,7 +20,8 @@ public final class NotificationDtos {
             Boolean wasSent,
             Boolean wasRead,
             OffsetDateTime receivedAt,
-            OffsetDateTime readAt) {
+            OffsetDateTime readAt,
+            UUID tripId) {
     }
 
     public record NotificationSettingsResponse(
@@ -29,9 +30,7 @@ public final class NotificationDtos {
             Boolean arrivalAlert,
             Boolean inactivityAlert,
             Boolean pushChannel,
-            Boolean emailChannel,
-            Boolean smsChannel,
-            Boolean smsAvailable) {
+            Boolean emailChannel) {
     }
 
     public record UpdateNotificationSettingsRequest(
@@ -40,8 +39,7 @@ public final class NotificationDtos {
             Boolean arrivalAlert,
             Boolean inactivityAlert,
             Boolean pushChannel,
-            Boolean emailChannel,
-            Boolean smsChannel) {
+            Boolean emailChannel) {
     }
 
     public record DeviceRequest(

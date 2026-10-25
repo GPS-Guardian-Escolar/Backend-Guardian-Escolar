@@ -74,6 +74,7 @@ class AuthServiceRegistrationTest {
         when(userRepository.existsByEmailIgnoreCase(request.email())).thenReturn(false);
         when(passwordEncoder.encode(request.password())).thenReturn("encoded-password");
         when(roleProvisioningService.parentRole()).thenReturn(parentRole);
+        when(emailService.isAvailable()).thenReturn(true);
     }
 
     @Test
@@ -118,4 +119,5 @@ class AuthServiceRegistrationTest {
         verify(emailService, never()).enviarVerificacionEmail(any(), any(), any());
         verify(notificationSettingsRepository, never()).save(any());
     }
+
 }

@@ -29,6 +29,10 @@ public class EmailService {
     @Value("${guardian.mail.provider:smtp}")
     private String mailProvider;
 
+    public boolean isAvailable() {
+        return mailEnabled;
+    }
+
     public void enviarVerificacionEmail(String recipient, String token, String returnUrl) {
         String url = emailLinkService.emailVerificationUrl(token, returnUrl);
         enviar(
@@ -76,8 +80,8 @@ public class EmailService {
                 "Si no reconoces este intento, ignora este email y cambia tu contraseña.");
     }
 
-    public void enviarCodeDosFactores(String recipient, String code) {
-        enviarCodigo(
+    public boolean enviarCodeDosFactores(String recipient, String code) {
+        return enviarCodigo(
                 recipient,
                 "Código de verificación - Guardian Escolar",
                 "Tu código de verificación",
@@ -119,7 +123,7 @@ public class EmailService {
                 emailTemplateService.htmlAction(title, description, textoBoton, url, note));
     }
 
-    private void enviarCodigo(
+    private boolean enviarCodigo(
             String recipient,
             String subject,
             String title,
@@ -128,7 +132,7 @@ public class EmailService {
             String note) {
         if (!mailEnabled) {
             LOGGER.info("Email desactivado. provider={}, subject={}", mailProvider, subject);
-            return;
+            return false;
         }
 
         emailSender().send(
@@ -137,6 +141,7 @@ public class EmailService {
                 subject,
                 emailTemplateService.plainCode(title, description, code, note),
                 emailTemplateService.htmlCode(title, description, code, note));
+        return true;
     }
 
     private EmailSender emailSender() {

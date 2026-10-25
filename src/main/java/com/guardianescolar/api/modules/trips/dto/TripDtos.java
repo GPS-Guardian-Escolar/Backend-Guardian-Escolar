@@ -31,7 +31,6 @@ public final class TripDtos {
             @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
             @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
             @PastOrPresent OffsetDateTime recordedAt,
-            @PositiveOrZero @DecimalMax("200.0") BigDecimal speedKmh,
             @PositiveOrZero @Max(86400) Integer stoppedSeconds) {
     }
 
@@ -53,7 +52,6 @@ public final class TripDtos {
             BigDecimal latitude,
             BigDecimal longitude,
             OffsetDateTime recordedAt,
-            BigDecimal speedKmh,
             Integer stoppedSeconds) {
     }
 }

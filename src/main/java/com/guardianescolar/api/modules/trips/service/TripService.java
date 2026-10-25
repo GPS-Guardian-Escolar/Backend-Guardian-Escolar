@@ -31,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TripService {
 
+    private final com.guardianescolar.api.modules.students.repository.StudentDeviceRepository studentDeviceRepository;
+
     private final TripRepository tripRepository;
     private final CoordinateRepository coordinateRepository;
     private final StudentRouteRepository studentRouteRepository;
@@ -85,6 +87,15 @@ public class TripService {
     @Transactional
     public TripDtos.TripResponse changeStatus(UUID tripId, TripDtos.ChangeStatusRequest request) {
         Trip trip = getAllowed(tripId);
+        if (SecurityContextHolder.getContext().getAuthentication().getDetails()
+                instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails) {
+            if (request.status() != TripStatus.COMPLETED && request.status() != TripStatus.CANCELED) {
+                throw new AccessDeniedException("A device may only finish or cancel its own trip");
+            }
+            if (request.hadDeviation() != null) {
+                throw new AccessDeniedException("A device cannot modify recorded incidents");
+            }
+        }
         trip.setStatus(request.status());
         if (request.hadDeviation() != null) {
             trip.setHadDeviation(request.hadDeviation());
@@ -103,7 +114,6 @@ public class TripService {
         coordinate.setLatitude(request.latitude());
         coordinate.setLongitude(request.longitude());
         coordinate.setRecordedAt(request.recordedAt() == null ? OffsetDateTime.now() : request.recordedAt());
-        coordinate.setSpeedKmh(request.speedKmh());
         coordinate.setStoppedSeconds(request.stoppedSeconds() == null ? 0 : request.stoppedSeconds());
         List<Coordinate> recentCoordinates = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(tripId);
         Coordinate previous = recentCoordinates.stream().findFirst().orElse(null);
@@ -152,9 +162,13 @@ public class TripService {
 
     private void validateChildStudent(UUID studentId) {
         Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
-        if (details instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails child
-                && !child.studentId().equals(studentId)) {
-            throw new AccessDeniedException("The device is not linked to this student");
+        if (details instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails child) {
+            boolean linked = child.studentId().equals(studentId) && studentDeviceRepository
+                    .findByDeviceIdentifier(child.deviceIdentifier())
+                    .filter(device -> Boolean.TRUE.equals(device.getIsActive()) && device.getDeletedAt() == null)
+                    .filter(device -> device.getStudent() != null && studentId.equals(device.getStudent().getId()))
+                    .isPresent();
+            if (!linked) throw new AccessDeniedException("The device is not linked to this student");
         }
     }
 }

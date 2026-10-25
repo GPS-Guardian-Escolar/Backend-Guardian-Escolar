@@ -8,6 +8,9 @@ import com.guardianescolar.api.modules.routes.repository.StudentRouteRepository;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.domain.EmergencyContact;
+import com.guardianescolar.api.modules.students.dto.EmergencyContactDtos;
+import com.guardianescolar.api.modules.students.repository.EmergencyContactRepository;
 import com.guardianescolar.api.modules.students.domain.SchoolGrade;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
@@ -30,6 +33,7 @@ public class StudentService {
     private static final int MAX_STUDENT_AGE = 21;
 
     private final StudentRepository studentRepository;
+    private final EmergencyContactRepository emergencyContactRepository;
     private final StudentDeviceRepository studentDeviceRepository;
     private final UserRepository userRepository;
     private final RouteRepository routeRepository;
@@ -54,25 +58,61 @@ public class StudentService {
 
     @Transactional
     public StudentDtos.StudentResponse create(StudentDtos.StudentRequest request) {
+        requireEmergencyContact(request);
         User current = currentUserService.currentUser();
         Student student = new Student();
-        student.setUser(resolveOwner(request.userId(), current));
+        User owner = resolveOwner(request.userId(), current);
+        validateUniqueName(owner, request.fullName(), null);
+        student.setUser(owner);
         applyData(student, request);
         student.setIsActive(true);
         student.setCreatedBy(current);
-        return studentMapper.toResponse(studentRepository.save(student));
+        Student saved = studentRepository.save(student);
+        savePrimaryContact(saved, request.emergencyContact(), current, true);
+        return studentMapper.toResponse(saved);
     }
 
     @Transactional
     public StudentDtos.StudentResponse update(UUID studentId, StudentDtos.StudentRequest request) {
+        requireEmergencyContact(request);
         User current = currentUserService.currentUser();
         Student student = getManageable(studentId);
         if (currentUserService.isAdmin(current) && request.userId() != null) {
             student.setUser(findOwner(request.userId()));
         }
+        validateUniqueName(student.getUser(), request.fullName(), student.getId());
         applyData(student, request);
         student.setUpdatedBy(current);
-        return studentMapper.toResponse(studentRepository.save(student));
+        Student saved = studentRepository.save(student);
+        savePrimaryContact(saved, request.emergencyContact(), current, false);
+        return studentMapper.toResponse(saved);
+    }
+
+    private void requireEmergencyContact(StudentDtos.StudentRequest request) {
+        if (request.emergencyContact() == null) {
+            throw new IllegalArgumentException("El contacto de emergencia es obligatorio");
+        }
+    }
+
+    private void savePrimaryContact(Student student, EmergencyContactDtos.EmergencyContactRequest request,
+            User current, boolean creating) {
+        List<EmergencyContact> contacts = creating ? List.of()
+                : emergencyContactRepository.findByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId());
+        EmergencyContact contact = contacts.stream().filter(item -> Boolean.TRUE.equals(item.getIsPrimary()))
+                .findFirst().orElseGet(() -> contacts.isEmpty() ? new EmergencyContact() : contacts.get(0));
+        if (contact.getId() == null) {
+            contact.setStudent(student);
+            contact.setCreatedBy(current);
+        } else {
+            contact.setUpdatedBy(current);
+        }
+        contact.setFullName(request.fullName().trim());
+        contact.setPhone(request.phone());
+        contact.setRelationship(request.relationship());
+        contact.setIsPrimary(true);
+        contact.setIsActive(true);
+        // Flush both writes inside this transaction so a contact failure rolls back the student too.
+        emergencyContactRepository.saveAndFlush(contact);
     }
 
     @Transactional
@@ -120,8 +160,13 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDtos.LinkedGuardianResponse share(UUID studentId, StudentDtos.ShareStudentRequest request) {
+    public StudentDtos.ShareStudentResponse share(UUID studentId, StudentDtos.ShareStudentRequest request) {
         return studentGuardianService.share(getManageable(studentId), request);
+    }
+
+    @Transactional
+    public void revokeGuardian(UUID studentId, UUID guardianUserId) {
+        studentGuardianService.revoke(getManageable(studentId), guardianUserId);
     }
 
     @Transactional(readOnly = true)
@@ -212,5 +257,16 @@ public class StudentService {
     private User findOwner(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner user not found"));
+    }
+
+    private void validateUniqueName(User owner, String fullName, UUID excludedStudentId) {
+        String normalizedName = fullName.trim().replaceAll("\\s+", " ");
+        boolean exists = excludedStudentId == null
+                ? studentRepository.existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNull(owner.getId(), normalizedName)
+                : studentRepository.existsByUserIdAndFullNameIgnoreCaseAndDeletedAtIsNullAndIdNot(
+                        owner.getId(), normalizedName, excludedStudentId);
+        if (exists) {
+            throw new IllegalArgumentException("Ya existe un estudiante con ese nombre en esta cuenta");
+        }
     }
 }

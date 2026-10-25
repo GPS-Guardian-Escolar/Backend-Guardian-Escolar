@@ -74,7 +74,6 @@ public class NotificationService {
         settings.setInactivityAlert(newOrCurrent(request.inactivityAlert(), settings.getInactivityAlert()));
         settings.setPushChannel(newOrCurrent(request.pushChannel(), settings.getPushChannel()));
         settings.setEmailChannel(newOrCurrent(request.emailChannel(), settings.getEmailChannel()));
-        settings.setSmsChannel(newOrCurrent(request.smsChannel(), settings.getSmsChannel()));
         return settingsResponse(notificationSettingsRepository.save(settings));
     }
 
@@ -127,7 +126,7 @@ public class NotificationService {
     }
 
     private NotificationDtos.NotificationSettingsResponse settingsResponse(NotificationSettings settings) {
-        return notificationMapper.toSettingsResponse(settings, notificationDeliveryService.smsAvailable());
+        return notificationMapper.toSettingsResponse(settings);
     }
 
     private Boolean newOrCurrent(Boolean newValue, Boolean currentValue) {

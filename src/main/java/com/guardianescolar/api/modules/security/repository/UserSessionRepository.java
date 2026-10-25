@@ -23,4 +23,8 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
             String deviceIdentifier);
 
     Optional<UserSession> findFirstByDeviceConfirmationToken(String deviceConfirmationToken);
+
+    boolean existsByTokenAndSessionStatus(String token, SessionStatus sessionStatus);
+
+    List<UserSession> findByUserIdAndSessionStatus(UUID userId, SessionStatus sessionStatus);
 }

@@ -50,8 +50,6 @@ public class NotificationSettings {
     @Column(name = "email_channel")
     private Boolean emailChannel = true;
 
-    @Column(name = "sms_channel")
-    private Boolean smsChannel = false;
 
     @CreationTimestamp
     @Column(name = "created_at")

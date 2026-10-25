@@ -14,7 +14,7 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - Rutas escolares y paradas.
 - Trayectos GPS y coordenadas.
 - Zonas seguras.
-- Notificaciones, Expo Push y SMS configurable.
+- Notificaciones por correo y Expo Push.
 - Panel administrativo.
 - Auditoria y registro de errores.
 - Configuracion Spring Boot por perfiles.
