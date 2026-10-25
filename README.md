@@ -44,7 +44,7 @@ Para ejecutar solo el backend con PostgreSQL disponible:
 En Windows:
 
 ```powershell
-.\\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
 
 ## Validación
