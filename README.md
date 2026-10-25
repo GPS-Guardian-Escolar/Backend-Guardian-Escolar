@@ -1,4 +1,4 @@
-# HU-20 Backend Implementado
+# GPS Guardian Escolar Backend
 
 ## Objetivo
 
@@ -23,19 +23,38 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
 
-## Validacion esperada
+## Requisitos y arranque
+
+- Java 17.
+- Maven Wrapper incluido (`mvnw` o `mvnw.cmd`).
+- PostgreSQL 15 con el esquema aplicado por Liquibase.
+- Variables de entorno definidas a partir de `.env.example`; `JWT_SECRET` debe tener al
+  menos 32 bytes aleatorios y no se incluye un valor de respaldo en el repositorio.
+
+El compose recomendado es el del repositorio `Docker-Infra-Guardian-Escolar`, porque inicia
+PostgreSQL, aplica Liquibase y después levanta la API. El backend independiente supone que la
+base ya existe y que las migraciones ya fueron aplicadas.
+
+Para ejecutar solo el backend con PostgreSQL disponible:
+
+```bash
+./mvnw spring-boot:run
+```
+
+En Windows:
+
+```powershell
+.\\mvnw.cmd spring-boot:run
+```
+
+## Validación
 
 ```bash
 ./mvnw test
 ```
 
-Resultado esperado:
-
-```text
-Tests run: 3
-Failures: 0
-BUILD SUCCESS
-```
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores.
 
 ## Google Maps Platform
 
