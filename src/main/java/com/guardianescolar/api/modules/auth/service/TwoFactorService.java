@@ -7,6 +7,8 @@ import com.guardianescolar.api.modules.security.repository.UserRepository;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +17,9 @@ import org.springframework.stereotype.Service;
 public class TwoFactorService {
 
     private static final int TWO_FACTOR_EXPIRATION_MINUTES = 10;
+    private static final int MAX_CODE_ATTEMPTS = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final ConcurrentHashMap<String, AttemptWindow> ATTEMPTS = new ConcurrentHashMap<>();
 
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -67,6 +71,7 @@ public class TwoFactorService {
         user.setTwoFactorCode(String.format("%06d", RANDOM.nextInt(1_000_000)));
         user.setTwoFactorToken(UUID.randomUUID().toString());
         user.setTwoFactorExpiresAt(OffsetDateTime.now().plusMinutes(TWO_FACTOR_EXPIRATION_MINUTES));
+        ATTEMPTS.remove(user.getTwoFactorToken());
     }
 
     private void sendCode(User user) {
@@ -79,15 +84,33 @@ public class TwoFactorService {
         if (user.getTwoFactorExpiresAt() == null || user.getTwoFactorExpiresAt().isBefore(OffsetDateTime.now())) {
             throw new IllegalArgumentException("Código de verificación expirado");
         }
+        String token = user.getTwoFactorToken();
+        AttemptWindow attempts = ATTEMPTS.computeIfAbsent(token, ignored -> new AttemptWindow());
+        if (attempts.isBlocked()) {
+            throw new IllegalArgumentException("Demasiados intentos. Solicita un nuevo código");
+        }
         if (user.getTwoFactorCode() == null || !user.getTwoFactorCode().equals(code)) {
+            if (attempts.failures.incrementAndGet() >= MAX_CODE_ATTEMPTS) {
+                attempts.blockedUntil = OffsetDateTime.now().plusMinutes(TWO_FACTOR_EXPIRATION_MINUTES);
+            }
             throw new IllegalArgumentException("Código de verificación incorrecto");
         }
+        ATTEMPTS.remove(token);
     }
 
     private void clearCode(User user) {
         user.setTwoFactorCode(null);
         user.setTwoFactorToken(null);
         user.setTwoFactorExpiresAt(null);
+    }
+
+    private static final class AttemptWindow {
+        private final AtomicInteger failures = new AtomicInteger();
+        private volatile OffsetDateTime blockedUntil;
+
+        private boolean isBlocked() {
+            return blockedUntil != null && blockedUntil.isAfter(OffsetDateTime.now());
+        }
     }
 
     private AuthDtos.TwoFactorChallengeResponse challengeResponse(String message, User user) {
