@@ -72,6 +72,15 @@ public class DeviceSessionService {
         userSessionRepository.flush();
     }
 
+    public void closeSession(String token) {
+        userSessionRepository.findByTokenAndSessionStatus(token, SessionStatus.ACTIVE)
+                .ifPresent(session -> {
+                    session.setSessionStatus(SessionStatus.CLOSED);
+                    session.setSessionEndedAt(OffsetDateTime.now());
+                    userSessionRepository.save(session);
+                });
+    }
+
     public AuthDtos.MessageResponse confirmLogin(String token) {
         UserSession session = userSessionRepository.findFirstByDeviceConfirmationToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Token de confirmación inválido"));
