@@ -28,9 +28,7 @@ public class StudentDeviceLinkService {
 
     @Transactional
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
-        Student student = request.studentId() == null
-                ? findStudentByCode(request.code())
-                : findStudent(request.studentId());
+        Student student = findStudent(request.studentId());
         studentLinkCodeService.consume(student, request.code());
 
         OffsetDateTime now = OffsetDateTime.now();
