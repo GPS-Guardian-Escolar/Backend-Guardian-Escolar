@@ -29,13 +29,7 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 ./mvnw test
 ```
 
-Resultado esperado:
-
-```text
-Tests run: 3
-Failures: 0
-BUILD SUCCESS
-```
+Resultado esperado: el numero de pruebas puede cambiar cuando se incorporen nuevos casos; el comando debe terminar con `BUILD SUCCESS` y cero fallos. El Dockerfile ejecuta estas pruebas durante el empaquetado.
 
 ## Google Maps Platform
 
@@ -108,3 +102,4 @@ un correo con ese proveedor.
 La selección de proveedor conserva los flujos actuales de verificación de correo,
 recuperación de contraseña, confirmación de dispositivo, doble factor y notificaciones. No
 se incluyen claves en el código ni en `.env.example`.
+
