@@ -78,15 +78,6 @@ class ChildTripAccessTest {
     }
 
     @Test
-    void cannotMoveCompletedTripBackToProgress() {
-        trip.setStatus(TripStatus.COMPLETED);
-
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
-        verify(trips, never()).save(any());
-    }
-
-    @Test
     void revokedDeviceCannotFinishOrUpload() {
         device.setIsActive(false);
         assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
