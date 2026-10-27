@@ -28,7 +28,7 @@ public final class AuthDtos {
     public record LoginRequest(
             @NotBlank @Email String email,
             @NotBlank String password,
-            @NotBlank @Size(max = 120) String deviceIdentifier,
+            @Size(max = 120) String deviceIdentifier,
             @Size(max = 120) String deviceName,
             @Size(max = 30) String platform,
             @Size(max = 500) String returnUrl) {
