@@ -2,6 +2,9 @@ package com.guardianescolar.api.shared.security;
 
 import lombok.RequiredArgsConstructor;
 import com.guardianescolar.api.modules.trips.repository.TripRepository;
+import com.guardianescolar.api.modules.security.domain.User;
+import com.guardianescolar.api.modules.security.repository.UserRepository;
+import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +29,8 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final TripRepository tripRepository;
+    private final UserRepository userRepository;
+    private final StudentGuardianRepository studentGuardianRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -73,7 +78,16 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                         || "ADMIN".equals(authority.getAuthority()));
         boolean owner = tripRepository.existsByIdAndStudentUserEmailIgnoreCaseAndDeletedAtIsNull(
                 tripId, authentication.getName());
+        boolean shared = false;
         if (!admin && !owner) {
+            User current = userRepository.findByEmailIgnoreCase(authentication.getName())
+                    .orElseThrow(() -> new AccessDeniedException("Usuario WebSocket inválido"));
+            shared = tripRepository.findByIdAndDeletedAtIsNull(tripId)
+                    .map(trip -> studentGuardianRepository.existsByStudentIdAndUserIdAndStatusAndDeletedAtIsNull(
+                            trip.getStudent().getId(), current.getId(), "ACTIVE"))
+                    .orElse(false);
+        }
+        if (!admin && !owner && !shared) {
             throw new AccessDeniedException("No tienes acceso a este viaje");
         }
     }
