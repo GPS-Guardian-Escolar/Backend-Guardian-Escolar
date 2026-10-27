@@ -178,5 +178,10 @@ class EmailProviderSpringContextTest {
         TwoFactorService twoFactorService() {
             return Mockito.mock(TwoFactorService.class);
         }
+
+        @Bean
+        AuthAttemptLimiter authAttemptLimiter() {
+            return Mockito.mock(AuthAttemptLimiter.class);
+        }
     }
 }
