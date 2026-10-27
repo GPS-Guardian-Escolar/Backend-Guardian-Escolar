@@ -65,6 +65,7 @@ public class StudentLinkCodeService {
         }
         if (!passwordEncoder.matches(code, student.getLinkCodeHash())) {
             student.setLinkCodeFailedAttempts(attempts + 1);
+            studentRepository.incrementLinkCodeFailedAttempts(student.getId());
             studentRepository.save(student);
             throw new IllegalArgumentException("Invalid link code");
         }
