@@ -16,8 +16,10 @@ public class RouteMapper {
                 route.getDescription(),
                 route.getOriginLatitude(),
                 route.getOriginLongitude(),
+                route.getOriginAddress(),
                 route.getDestinationLatitude(),
                 route.getDestinationLongitude(),
+                route.getDestinationAddress(),
                 stops.stream().map(this::toStopResponse).toList());
     }
 
