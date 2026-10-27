@@ -1,4 +1,7 @@
 package com.guardianescolar.api.modules.trips.controller;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,16 +26,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/trips")
 @RequiredArgsConstructor
 @Tag(name = "Trips", description = "GPS trips, coordinates and status")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Solicitud inválida o parámetros no válidos"),
+    @ApiResponse(responseCode = "401", description = "Se requiere autenticación"),
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+})
 public class TripController {
 
     private final TripService tripService;
 
+    @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
     public List<TripDtos.TripResponse> list() {
         return tripService.list();
     }
 
+    @Operation(summary = "Crear recurso")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
@@ -40,6 +50,7 @@ public class TripController {
         return tripService.create(request);
     }
 
+    @Operation(summary = "Cambiar estado del trayecto")
     @PatchMapping("/{tripId}/status")
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
     public TripDtos.TripResponse changeStatus(
@@ -48,6 +59,7 @@ public class TripController {
         return tripService.changeStatus(tripId, request);
     }
 
+    @Operation(summary = "Registrar coordenada del trayecto")
     @PostMapping("/{tripId}/coordinates")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
@@ -57,6 +69,7 @@ public class TripController {
         return tripService.registerCoordinate(tripId, request);
     }
 
+    @Operation(summary = "Listar coordenadas del trayecto")
     @GetMapping("/{tripId}/coordinates")
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
     public List<TripDtos.CoordinateResponse> listCoordinates(@PathVariable UUID tripId) {

@@ -1,4 +1,7 @@
 package com.guardianescolar.api.modules.notifications.controller;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,30 +22,40 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 @Tag(name = "Notifications", description = "User notifications and read state")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Solicitud inválida o parámetros no válidos"),
+    @ApiResponse(responseCode = "401", description = "Se requiere autenticación"),
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+})
 public class NotificationController {
 
     private final NotificationService notificationService;
 
+    @Operation(summary = "Listar recursos")
     @GetMapping
     public List<NotificationDtos.NotificationResponse> list() {
         return notificationService.listForCurrentUser();
     }
 
+    @Operation(summary = "Marcar notificación como leída")
     @PatchMapping("/{receiptId}/read")
     public NotificationDtos.NotificationResponse markAsRead(@PathVariable UUID receiptId) {
         return notificationService.markAsRead(receiptId);
     }
 
+    @Operation(summary = "Marcar todas las notificaciones como leídas")
     @PatchMapping("/read-all")
     public int markAllAsRead() {
         return notificationService.markAllAsRead();
     }
 
+    @Operation(summary = "Consultar preferencias de notificación")
     @GetMapping("/settings")
     public NotificationDtos.NotificationSettingsResponse getSettings() {
         return notificationService.getCurrentSettings();
     }
 
+    @Operation(summary = "Actualizar preferencias de notificación")
     @PutMapping("/settings")
     public NotificationDtos.NotificationSettingsResponse updateSettings(
             @RequestBody NotificationDtos.UpdateNotificationSettingsRequest request) {
