@@ -64,6 +64,18 @@ class DeviceSessionServiceTest {
     }
 
     @Test
+    void missingDeviceIdentifierCannotAuthorizeLogin() {
+        User user = user();
+        AuthDtos.LoginRequest request = loginRequest(null);
+        when(validationService.normalizeOptionalText(null)).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.validateDeviceLogin(user, request));
+        verify(repository, org.mockito.Mockito.never()).save(any(UserSession.class));
+        verify(emailService, org.mockito.Mockito.never())
+                .enviarConfirmacionNuevoDispositivo(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void confirmedTokenIsSingleUseAndActivatesPendingSession() {
         UserSession pending = new UserSession();
         pending.setDeviceConfirmationToken("one-time-token");
