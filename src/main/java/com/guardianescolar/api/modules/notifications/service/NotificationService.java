@@ -96,10 +96,10 @@ public class NotificationService {
             String eventType,
             String message) {
         if (NotificationEventTypes.INACTIVITY.equals(eventType)) {
-            lockInactivityDeduplication(trip.getId());
-            if (notificationRepository.existsByTripIdAndEventTypeAndEventDateTimeAfter(
+            lockInactivityDeduplication(trip.getId(), eventType, user.getId());
+            if (notificationRepository.existsRecentNotificationForUser(
                     trip.getId(), eventType,
-                    OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES))) {
+                    OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES), user.getId())) {
                 return;
             }
         }
@@ -113,10 +113,10 @@ public class NotificationService {
         }
     }
 
-    private void lockInactivityDeduplication(UUID tripId) {
+    private void lockInactivityDeduplication(UUID tripId, String eventType, UUID userId) {
         entityManager.createNativeQuery(
                         "SELECT pg_advisory_xact_lock(hashtextextended(:deduplicationKey, 0))")
-                .setParameter("deduplicationKey", "notification:inactivity:" + tripId)
+                .setParameter("deduplicationKey", "notification:" + tripId + ":" + eventType + ":" + userId)
                 .getSingleResult();
     }
 
