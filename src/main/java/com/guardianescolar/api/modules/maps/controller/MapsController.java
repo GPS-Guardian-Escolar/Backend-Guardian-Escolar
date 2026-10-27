@@ -1,5 +1,4 @@
 package com.guardianescolar.api.modules.maps.controller;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.guardianescolar.api.modules.maps.dto.MapsDtos;
 import com.guardianescolar.api.modules.maps.service.MapsRateLimiter;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequestMapping("/api/maps")
-@Tag(name = "Maps", description = "Geocoding, places and directions through Google Maps")
 @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
 public class MapsController {
 
