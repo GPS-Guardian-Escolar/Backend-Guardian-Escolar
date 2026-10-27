@@ -3,6 +3,8 @@ package com.guardianescolar.api.modules.trips.service;
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.repository.StudentRepository;
+import com.guardianescolar.api.modules.students.service.StudentAccessService;
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.notifications.service.NotificationService;
 import com.guardianescolar.api.modules.routes.domain.Route;
@@ -37,6 +39,8 @@ public class TripService {
     private final CoordinateRepository coordinateRepository;
     private final StudentRouteRepository studentRouteRepository;
     private final StudentService studentService;
+    private final StudentRepository studentRepository;
+    private final StudentAccessService studentAccessService;
     private final RouteService routeService;
     private final CurrentUserService currentUserService;
     private final NotificationService notificationService;
@@ -48,9 +52,19 @@ public class TripService {
     @Transactional(readOnly = true)
     public List<TripDtos.TripResponse> list() {
         User current = currentUserService.currentUser();
-        List<Trip> trips = currentUserService.isAdmin(current)
-                ? tripRepository.findByDeletedAtIsNullOrderByTripStartedAtDesc()
-                : tripRepository.findByStudentUserEmailIgnoreCaseAndDeletedAtIsNullOrderByTripStartedAtDesc(current.getEmail());
+        List<Trip> trips;
+        if (currentUserService.isAdmin(current)) {
+            trips = tripRepository.findByDeletedAtIsNullOrderByTripStartedAtDesc();
+        } else {
+            List<Student> ownedStudents = studentRepository
+                    .findByUserEmailIgnoreCaseAndDeletedAtIsNullOrderByFullNameAsc(current.getEmail());
+            List<UUID> visibleStudentIds = studentAccessService.visibleStudents(current, ownedStudents).stream()
+                    .map(Student::getId)
+                    .toList();
+            trips = visibleStudentIds.isEmpty()
+                    ? List.of()
+                    : tripRepository.findByStudentIdInAndDeletedAtIsNullOrderByTripStartedAtDesc(visibleStudentIds);
+        }
         return trips.stream().map(tripMapper::toResponse).toList();
     }
 
@@ -151,12 +165,8 @@ public class TripService {
     private Trip getAllowed(UUID tripId) {
         Trip trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
-        User current = currentUserService.currentUser();
         validateChildStudent(trip.getStudent().getId());
-        boolean owner = trip.getStudent().getUser().getId().equals(current.getId());
-        if (!currentUserService.isAdmin(current) && !owner) {
-            throw new AccessDeniedException("You do not have access to this trip");
-        }
+        studentAccessService.validateAccess(trip.getStudent());
         return trip;
     }
 
