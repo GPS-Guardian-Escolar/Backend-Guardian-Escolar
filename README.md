@@ -118,13 +118,6 @@ Content-Type: application/json
 
 Los endpoints requieren JWT y no exponen la API key al cliente.
 
-## Direcciones de origen y destino de rutas
-
-Las propiedades opcionales `originAddress` y `destinationAddress` se guardan en las columnas
-`routes.origin_address` y `routes.destination_address`. Antes de desplegar este cambio, aplica
-la migración `004l-ddl-add-route-addresses` del repositorio DB-Structure; sin esa migración,
-Hibernate no encontrará las columnas al leer o guardar rutas.
-
 ## Proveedores de correo
 
 El proveedor se selecciona con `MAIL_PROVIDER` y por defecto es `smtp`, por lo que la

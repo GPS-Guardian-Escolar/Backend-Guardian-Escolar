@@ -97,10 +97,8 @@ public class RouteService {
         route.setDescription(routeValidationService.normalizeOptionalText(request.description()));
         route.setOriginLatitude(request.originLatitude());
         route.setOriginLongitude(request.originLongitude());
-        route.setOriginAddress(routeValidationService.normalizeOptionalText(request.originAddress()));
         route.setDestinationLatitude(request.destinationLatitude());
         route.setDestinationLongitude(request.destinationLongitude());
-        route.setDestinationAddress(routeValidationService.normalizeOptionalText(request.destinationAddress()));
     }
 
     private List<Stop> replaceStopsIfRequested(Route route, List<RouteDtos.StopRequest> requests) {

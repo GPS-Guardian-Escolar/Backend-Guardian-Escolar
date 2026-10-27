@@ -41,17 +41,11 @@ public class Route {
     @Column(name = "origin_longitude", precision = 9, scale = 6)
     private BigDecimal originLongitude;
 
-    @Column(name = "origin_address", length = 255)
-    private String originAddress;
-
     @Column(name = "destination_latitude", precision = 9, scale = 6)
     private BigDecimal destinationLatitude;
 
     @Column(name = "destination_longitude", precision = 9, scale = 6)
     private BigDecimal destinationLongitude;
-
-    @Column(name = "destination_address", length = 255)
-    private String destinationAddress;
 
     @CreationTimestamp
     @Column(name = "created_at")
