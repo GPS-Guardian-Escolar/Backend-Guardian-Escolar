@@ -4,12 +4,10 @@ import com.guardianescolar.api.modules.routes.domain.Stop;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 
 public interface StopRepository extends JpaRepository<Stop, UUID> {
 
     List<Stop> findByRouteIdOrderByStopOrderAsc(UUID routeId);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
     void deleteByRouteId(UUID routeId);
 }
