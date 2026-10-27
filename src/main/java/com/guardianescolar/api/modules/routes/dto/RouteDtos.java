@@ -21,8 +21,10 @@ public final class RouteDtos {
             @Size(max = 255) String description,
             @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal originLatitude,
             @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal originLongitude,
+            @Size(max = 255) String originAddress,
             @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal destinationLatitude,
             @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal destinationLongitude,
+            @Size(max = 255) String destinationAddress,
             List<@Valid StopRequest> stops) {
     }
 
@@ -39,8 +41,10 @@ public final class RouteDtos {
             String description,
             BigDecimal originLatitude,
             BigDecimal originLongitude,
+            String originAddress,
             BigDecimal destinationLatitude,
             BigDecimal destinationLongitude,
+            String destinationAddress,
             List<StopResponse> stops) {
     }
 
