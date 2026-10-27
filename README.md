@@ -1,4 +1,4 @@
-# HU-20 Backend Implementado
+# GPS Guardian Escolar Backend
 
 ## Objetivo
 
@@ -23,13 +23,48 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
 
-## Validacion esperada
+## Dependencia de base de datos
+
+La API no crea el esquema PostgreSQL por sí sola. El esquema, roles, índices y datos iniciales
+se administran en `DB-Structure-Guardian-Escolar` mediante Liquibase. En un entorno local, el
+orden soportado es:
+
+1. Iniciar PostgreSQL.
+2. Ejecutar Liquibase con el changelog de la base de datos.
+3. Iniciar esta API con `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` apuntando a esa base.
+
+El compose recomendado del repositorio `Docker-Infra-Guardian-Escolar` automatiza ese orden y
+espera a que Liquibase termine antes de iniciar el backend.
+
+## Requisitos y arranque
+
+- Java 17.
+- Maven Wrapper incluido (`mvnw` o `mvnw.cmd`).
+- PostgreSQL 15 con el esquema aplicado por Liquibase.
+- Variables de entorno definidas a partir de `.env.example`; `JWT_SECRET` debe contener al
+  menos 32 bytes aleatorios y es obligatorio. La configuración no tiene un valor de respaldo.
+
+Para ejecutar solo el backend con PostgreSQL disponible:
 
 ```bash
-./mvnw test
+bash ./mvnw spring-boot:run
 ```
 
-Resultado esperado: el numero de pruebas puede cambiar cuando se incorporen nuevos casos; el comando debe terminar con `BUILD SUCCESS` y cero fallos. El Dockerfile ejecuta estas pruebas durante el empaquetado.
+En Windows:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+## Validación
+
+```bash
+bash ./mvnw test
+```
+
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores; el Dockerfile ejecuta estas pruebas
+durante el empaquetado.
 
 ## Google Maps Platform
 
@@ -62,6 +97,13 @@ Content-Type: application/json
 ```
 
 Los endpoints requieren JWT y no exponen la API key al cliente.
+
+## Direcciones de origen y destino de rutas
+
+Las propiedades opcionales `originAddress` y `destinationAddress` se guardan en las columnas
+`routes.origin_address` y `routes.destination_address`. Antes de desplegar este cambio, aplica
+la migración `004l-ddl-add-route-addresses` del repositorio DB-Structure; sin esa migración,
+Hibernate no encontrará las columnas al leer o guardar rutas.
 
 ## Proveedores de correo
 
