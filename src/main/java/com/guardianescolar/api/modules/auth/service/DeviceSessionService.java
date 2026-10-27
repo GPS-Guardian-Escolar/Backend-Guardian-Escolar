@@ -5,7 +5,11 @@ import com.guardianescolar.api.modules.security.domain.SessionStatus;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.domain.UserSession;
 import com.guardianescolar.api.modules.security.repository.UserSessionRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
+import java.util.HexFormat;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -54,7 +58,7 @@ public class DeviceSessionService {
     public void saveSession(User user, String token, AuthDtos.LoginRequest request) {
         UserSession session = new UserSession();
         session.setUser(user);
-        session.setToken(token);
+        session.setToken(hashSessionToken(token));
         session.setDeviceIdentifier(validationService.normalizeOptionalText(request.deviceIdentifier()));
         session.setDeviceName(validationService.normalizeOptionalText(request.deviceName()));
         session.setPlatform(validationService.normalizeOptionalText(request.platform()));
@@ -70,6 +74,15 @@ public class DeviceSessionService {
                     session.setSessionEndedAt(OffsetDateTime.now());
                 });
         userSessionRepository.flush();
+    }
+
+    public void closeSession(String token) {
+        userSessionRepository.findByTokenAndSessionStatus(hashSessionToken(token), SessionStatus.ACTIVE)
+                .ifPresent(session -> {
+                    session.setSessionStatus(SessionStatus.CLOSED);
+                    session.setSessionEndedAt(OffsetDateTime.now());
+                    userSessionRepository.save(session);
+                });
     }
 
     public AuthDtos.MessageResponse confirmLogin(String token) {
@@ -111,5 +124,14 @@ public class DeviceSessionService {
                         user.getId(),
                         deviceIdentifier)
                 .orElseGet(UserSession::new);
+    }
+
+    private String hashSessionToken(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 }

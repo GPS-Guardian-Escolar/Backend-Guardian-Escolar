@@ -203,6 +203,14 @@ public class AuthService {
     }
 
     @Transactional
+    public AuthDtos.MessageResponse logout(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            deviceSessionService.closeSession(authorizationHeader.substring(7).trim());
+        }
+        return new AuthDtos.MessageResponse("Sesión cerrada correctamente");
+    }
+
+    @Transactional
     public AuthDtos.TwoFactorChallengeResponse solicitarDosFactores(AuthDtos.RequestTwoFactorRequest request) {
         return twoFactorService.request(currentUserService.currentUser(), request.method());
     }

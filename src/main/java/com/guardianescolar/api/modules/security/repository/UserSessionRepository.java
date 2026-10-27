@@ -26,5 +26,7 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
 
     boolean existsByTokenAndSessionStatus(String token, SessionStatus sessionStatus);
 
+    Optional<UserSession> findByTokenAndSessionStatus(String token, SessionStatus sessionStatus);
+
     List<UserSession> findByUserIdAndSessionStatus(UUID userId, SessionStatus sessionStatus);
 }
