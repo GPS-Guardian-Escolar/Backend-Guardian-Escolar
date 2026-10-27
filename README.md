@@ -26,7 +26,7 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 ## Validacion esperada
 
 ```bash
-./mvnw --batch-mode clean verify
+bash ./mvnw --batch-mode clean verify
 ```
 
 El resultado esperado es `BUILD SUCCESS` y cero fallos. La cantidad de pruebas puede cambiar cuando se agregan regresiones; no se debe fijar un numero historico en la documentacion. Para consultar el resumen real de Maven:
@@ -39,7 +39,7 @@ Si el entorno local no tiene Docker/PostgreSQL disponible, ejecuta al menos la f
 
 ## Imagen Docker
 
-El Dockerfile compila el artefacto con `-DskipTests` para separar la construccion de la imagen de la puerta de calidad. Las pruebas deben ejecutarse antes, mediante `./mvnw --batch-mode clean verify` o el workflow de CI. Una imagen construida correctamente no demuestra por si sola que las pruebas hayan pasado.
+La puerta de calidad es `bash ./mvnw --batch-mode clean verify` o el workflow de CI. No uses el resultado de construir una imagen Docker como sustituto de esa validacion: las opciones Maven del Dockerfile pueden cambiar según el flujo de despliegue y no deben describirse aquí como una garantía de pruebas.
 
 ## Google Maps Platform
 
