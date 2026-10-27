@@ -92,6 +92,12 @@ public class StudentController {
         studentService.revokeGuardian(studentId, guardianUserId);
     }
 
+    @PostMapping("/{studentId}/link-code")
+    @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
+    public StudentDtos.LinkCodeResponse issueLinkCode(@PathVariable UUID studentId) {
+        return studentService.issueLinkCode(studentId);
+    }
+
     @PostMapping("/link-device")
     public StudentDtos.StudentDeviceResponse linkDevice(
             @Valid @RequestBody StudentDtos.LinkDeviceRequest request) {
