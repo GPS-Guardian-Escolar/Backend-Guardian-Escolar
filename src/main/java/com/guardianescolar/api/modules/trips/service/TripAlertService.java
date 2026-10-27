@@ -5,9 +5,6 @@ import com.guardianescolar.api.modules.notifications.domain.NotificationEventTyp
 import com.guardianescolar.api.modules.routes.domain.Route;
 import com.guardianescolar.api.modules.routes.domain.Stop;
 import com.guardianescolar.api.modules.routes.repository.StopRepository;
-import com.guardianescolar.api.modules.security.domain.User;
-import com.guardianescolar.api.modules.students.domain.StudentGuardian;
-import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 import com.guardianescolar.api.modules.trips.domain.Coordinate;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
@@ -17,9 +14,6 @@ import com.guardianescolar.api.modules.zones.repository.SafeZoneRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,7 +28,6 @@ public class TripAlertService {
     private final TripRepository tripRepository;
     private final SafeZoneRepository safeZoneRepository;
     private final StopRepository stopRepository;
-    private final StudentGuardianRepository studentGuardianRepository;
     private final NotificationService notificationService;
     private final GeoMathService geoMathService;
 
@@ -54,7 +47,10 @@ public class TripAlertService {
                 .min(Comparator.naturalOrder())
                 .orElse(DEFAULT_INACTIVITY_THRESHOLD_SECONDS);
         if (stoppedSeconds >= threshold) {
-            notifyRecipients(trip, null, NotificationEventTypes.INACTIVITY,
+            notificationService.createForUser(
+                    trip,
+                    trip.getStudent().getUser(),
+                    NotificationEventTypes.INACTIVITY,
                     "Se detectó inactividad prolongada durante el trayecto de " + trip.getStudent().getFullName());
         }
     }
@@ -94,10 +90,18 @@ public class TripAlertService {
             return;
         }
         if (insideNow && !insideBeforePrevious) {
-            notifyRecipients(trip, zone, NotificationEventTypes.SAFE_ZONE_ENTRY,
+            notificationService.createForUser(
+                    trip,
+                    zone,
+                    trip.getStudent().getUser(),
+                    NotificationEventTypes.SAFE_ZONE_ENTRY,
                     trip.getStudent().getFullName() + " ingresó a la zona segura " + zone.getZoneName());
         } else if (!insideNow && insideBeforePrevious) {
-            notifyRecipients(trip, zone, NotificationEventTypes.SAFE_ZONE_EXIT,
+            notificationService.createForUser(
+                    trip,
+                    zone,
+                    trip.getStudent().getUser(),
+                    NotificationEventTypes.SAFE_ZONE_EXIT,
                     trip.getStudent().getFullName() + " salió de la zona segura " + zone.getZoneName());
         }
     }
@@ -119,26 +123,14 @@ public class TripAlertService {
         if (routeDistance > routeDeviationThresholdMeters) {
             trip.setHadDeviation(true);
             tripRepository.save(trip);
-            notifyRecipients(trip, null, NotificationEventTypes.ROUTE_DEVIATION,
+            notificationService.createForUser(
+                    trip,
+                    trip.getStudent().getUser(),
+                    NotificationEventTypes.ROUTE_DEVIATION,
                     "Se detectó un posible desvío de ruta para " + trip.getStudent().getFullName());
         }
     }
 
-    private void notifyRecipients(Trip trip, SafeZone safeZone, String eventType, String message) {
-        Map<UUID, User> recipients = new LinkedHashMap<>();
-        addRecipient(recipients, trip.getStudent().getUser());
-        List<StudentGuardian> guardians = studentGuardianRepository.findByStudentIdAndStatusAndDeletedAtIsNull(
-                trip.getStudent().getId(), "ACTIVE");
-        guardians.stream().map(StudentGuardian::getUser).forEach(user -> addRecipient(recipients, user));
-        recipients.values().forEach(user -> notificationService.createForUser(
-                trip, safeZone, user, eventType, message));
-    }
-
-    private void addRecipient(Map<UUID, User> recipients, User user) {
-        if (user != null && user.getId() != null) {
-            recipients.putIfAbsent(user.getId(), user);
-        }
-    }
     private boolean isInsideZone(Coordinate coordinate, SafeZone zone) {
         return geoMathService.isInsideRadius(
                 coordinate.getLatitude(),

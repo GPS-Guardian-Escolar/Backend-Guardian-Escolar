@@ -13,7 +13,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +25,13 @@ public class StudentDeviceLinkService {
     private final StudentLinkCodeService studentLinkCodeService;
     private final JwtService jwtService;
 
-    @Transactional
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
-        Student student = findStudent(request.studentId());
-        studentLinkCodeService.consume(student, request.code());
+        Student student = request.studentId() == null
+                ? findStudentByCode(request.code())
+                : findStudent(request.studentId());
+        if (!studentLinkCodeService.matches(student.getId(), request.code())) {
+            throw new IllegalArgumentException("Invalid link code");
+        }
 
         OffsetDateTime now = OffsetDateTime.now();
         String deviceIdentifier = request.deviceIdentifier().trim();
@@ -52,12 +54,14 @@ public class StudentDeviceLinkService {
 
     public StudentDtos.LinkedProfileResponse linkedProfile(java.util.UUID studentId, String code) {
         Student student = findStudent(studentId);
-        studentLinkCodeService.verify(student, code);
+        if (!studentLinkCodeService.matches(student.getId(), code)) {
+            throw new IllegalArgumentException("Invalid link code");
+        }
 
         EmergencyContact contact = primaryContact(studentId);
         return new StudentDtos.LinkedProfileResponse(
                 student.getId(),
-                code,
+                studentLinkCodeService.codeFor(student.getId()),
                 student.getFullName(),
                 student.getSchoolGrade(),
                 student.getBirthDate(),
@@ -104,7 +108,15 @@ public class StudentDeviceLinkService {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
-private String normalizeOptionalText(String value) {
+
+    private Student findStudentByCode(String code) {
+        return studentRepository.findByDeletedAtIsNullOrderByFullNameAsc().stream()
+                .filter(candidate -> studentLinkCodeService.matches(candidate.getId(), code))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for link code"));
+    }
+
+    private String normalizeOptionalText(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }

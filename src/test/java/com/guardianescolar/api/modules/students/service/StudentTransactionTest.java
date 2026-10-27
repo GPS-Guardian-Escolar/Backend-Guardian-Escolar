@@ -73,7 +73,7 @@ class StudentTransactionTest {
         StudentService target = new StudentService(students, contacts, mock(StudentDeviceRepository.class),
                 mock(UserRepository.class), mock(RouteRepository.class), mock(StudentRouteRepository.class),
                 current, mock(StudentMapper.class), mock(StudentAccessService.class),
-                mock(StudentGuardianService.class), mock(StudentDeviceLinkService.class), mock(StudentLinkCodeService.class));
+                mock(StudentGuardianService.class), mock(StudentDeviceLinkService.class));
         TransactionInterceptor transactions = new TransactionInterceptor();
         transactions.setTransactionManager(new DataSourceTransactionManager(dataSource));
         transactions.setTransactionAttributeSource(new AnnotationTransactionAttributeSource());

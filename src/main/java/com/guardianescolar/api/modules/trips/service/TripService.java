@@ -3,8 +3,6 @@ package com.guardianescolar.api.modules.trips.service;
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.students.domain.Student;
-import com.guardianescolar.api.modules.students.repository.StudentRepository;
-import com.guardianescolar.api.modules.students.service.StudentAccessService;
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.notifications.service.NotificationService;
 import com.guardianescolar.api.modules.routes.domain.Route;
@@ -39,8 +37,6 @@ public class TripService {
     private final CoordinateRepository coordinateRepository;
     private final StudentRouteRepository studentRouteRepository;
     private final StudentService studentService;
-    private final StudentRepository studentRepository;
-    private final StudentAccessService studentAccessService;
     private final RouteService routeService;
     private final CurrentUserService currentUserService;
     private final NotificationService notificationService;
@@ -52,19 +48,9 @@ public class TripService {
     @Transactional(readOnly = true)
     public List<TripDtos.TripResponse> list() {
         User current = currentUserService.currentUser();
-        List<Trip> trips;
-        if (currentUserService.isAdmin(current)) {
-            trips = tripRepository.findByDeletedAtIsNullOrderByTripStartedAtDesc();
-        } else {
-            List<Student> ownedStudents = studentRepository
-                    .findByUserEmailIgnoreCaseAndDeletedAtIsNullOrderByFullNameAsc(current.getEmail());
-            List<UUID> visibleStudentIds = studentAccessService.visibleStudents(current, ownedStudents).stream()
-                    .map(Student::getId)
-                    .toList();
-            trips = visibleStudentIds.isEmpty()
-                    ? List.of()
-                    : tripRepository.findByStudentIdInAndDeletedAtIsNullOrderByTripStartedAtDesc(visibleStudentIds);
-        }
+        List<Trip> trips = currentUserService.isAdmin(current)
+                ? tripRepository.findByDeletedAtIsNullOrderByTripStartedAtDesc()
+                : tripRepository.findByStudentUserEmailIgnoreCaseAndDeletedAtIsNullOrderByTripStartedAtDesc(current.getEmail());
         return trips.stream().map(tripMapper::toResponse).toList();
     }
 
@@ -72,9 +58,6 @@ public class TripService {
     public TripDtos.TripResponse create(TripDtos.TripRequest request) {
         validateChildStudent(request.studentId());
         Student student = studentService.getAllowed(request.studentId());
-        if (tripRepository.existsByStudentIdAndStatusAndDeletedAtIsNull(request.studentId(), TripStatus.IN_PROGRESS)) {
-            throw new IllegalArgumentException("The student already has an active trip");
-        }
         Route route = request.routeId() == null
                 ? studentRouteRepository.findByIdStudentIdAndIsActiveTrue(request.studentId()).stream()
                         .map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
@@ -104,9 +87,6 @@ public class TripService {
     @Transactional
     public TripDtos.TripResponse changeStatus(UUID tripId, TripDtos.ChangeStatusRequest request) {
         Trip trip = getAllowed(tripId);
-        if (!isAllowedTransition(trip.getStatus(), request.status())) {
-            throw new IllegalArgumentException("Invalid trip status transition");
-        }
         if (SecurityContextHolder.getContext().getAuthentication().getDetails()
                 instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails) {
             if (request.status() != TripStatus.COMPLETED && request.status() != TripStatus.CANCELED) {
@@ -124,15 +104,6 @@ public class TripService {
             trip.setTripEndedAt(OffsetDateTime.now());
         }
         return tripMapper.toResponse(tripRepository.save(trip));
-    }
-
-    private boolean isAllowedTransition(TripStatus current, TripStatus requested) {
-        if (current == requested) {
-            return true;
-        }
-        return (current == TripStatus.PENDING && requested == TripStatus.IN_PROGRESS)
-                || (current == TripStatus.IN_PROGRESS
-                        && (requested == TripStatus.COMPLETED || requested == TripStatus.CANCELED));
     }
 
     @Transactional
@@ -180,8 +151,12 @@ public class TripService {
     private Trip getAllowed(UUID tripId) {
         Trip trip = tripRepository.findByIdAndDeletedAtIsNull(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found"));
+        User current = currentUserService.currentUser();
         validateChildStudent(trip.getStudent().getId());
-        studentAccessService.validateAccess(trip.getStudent());
+        boolean owner = trip.getStudent().getUser().getId().equals(current.getId());
+        if (!currentUserService.isAdmin(current) && !owner) {
+            throw new AccessDeniedException("You do not have access to this trip");
+        }
         return trip;
     }
 

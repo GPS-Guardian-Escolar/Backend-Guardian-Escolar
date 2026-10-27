@@ -43,7 +43,6 @@ public class StudentService {
     private final StudentAccessService studentAccessService;
     private final StudentGuardianService studentGuardianService;
     private final StudentDeviceLinkService studentDeviceLinkService;
-    private final StudentLinkCodeService studentLinkCodeService;
 
     @Transactional(readOnly = true)
     public List<StudentDtos.StudentResponse> list() {
@@ -173,13 +172,6 @@ public class StudentService {
     @Transactional(readOnly = true)
     public List<StudentDtos.LinkedGuardianResponse> listGuardians(UUID studentId) {
         return studentGuardianService.listGuardians(getAllowed(studentId));
-    }
-
-    @Transactional
-    public StudentDtos.LinkCodeResponse issueLinkCode(UUID studentId) {
-        Student student = getManageable(studentId);
-        StudentLinkCodeService.IssuedCode issued = studentLinkCodeService.issue(student);
-        return new StudentDtos.LinkCodeResponse(issued.value(), issued.expiresAt());
     }
 
     @Transactional

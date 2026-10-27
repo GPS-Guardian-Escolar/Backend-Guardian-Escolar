@@ -54,18 +54,6 @@ public class Student {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
-    @Column(name = "link_code_hash", length = 100)
-    private String linkCodeHash;
-
-    @Column(name = "link_code_expires_at")
-    private OffsetDateTime linkCodeExpiresAt;
-
-    @Column(name = "link_code_used_at")
-    private OffsetDateTime linkCodeUsedAt;
-
-    @Column(name = "link_code_failed_attempts", nullable = false)
-    private Integer linkCodeFailedAttempts = 0;
-
     @CreationTimestamp
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
