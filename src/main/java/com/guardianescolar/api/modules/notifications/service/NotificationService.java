@@ -13,6 +13,7 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
 import java.time.OffsetDateTime;
@@ -32,6 +33,7 @@ public class NotificationService {
     private final CurrentUserService currentUserService;
     private final NotificationDeliveryService notificationDeliveryService;
     private final NotificationMapper notificationMapper;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<NotificationDtos.NotificationResponse> listForCurrentUser() {
@@ -93,11 +95,13 @@ public class NotificationService {
             User user,
             String eventType,
             String message) {
-        if (NotificationEventTypes.INACTIVITY.equals(eventType)
-                && notificationRepository.existsByTripIdAndEventTypeAndEventDateTimeAfter(
-                        trip.getId(), eventType,
-                        OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES))) {
-            return;
+        if (NotificationEventTypes.INACTIVITY.equals(eventType)) {
+            lockInactivityDeduplication(trip.getId());
+            if (notificationRepository.existsByTripIdAndEventTypeAndEventDateTimeAfter(
+                    trip.getId(), eventType,
+                    OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES))) {
+                return;
+            }
         }
         Notification notification = saveNotification(trip, safeZone, eventType, message);
         saveReceipt(notification, user);
@@ -107,6 +111,13 @@ public class NotificationService {
             notification.setWasSent(true);
             notificationRepository.save(notification);
         }
+    }
+
+    private void lockInactivityDeduplication(UUID tripId) {
+        entityManager.createNativeQuery(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(:deduplicationKey, 0))")
+                .setParameter("deduplicationKey", "notification:inactivity:" + tripId)
+                .getSingleResult();
     }
 
     private Notification saveNotification(Trip trip, SafeZone safeZone, String eventType, String message) {
