@@ -29,7 +29,9 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - Maven Wrapper incluido (`mvnw` o `mvnw.cmd`).
 - PostgreSQL 15 con el esquema aplicado por Liquibase.
 - Variables de entorno definidas a partir de `.env.example`; `JWT_SECRET` debe tener al
-  menos 32 bytes aleatorios y no se incluye un valor de respaldo en el repositorio.
+  menos 32 bytes aleatorios. En esta rama, `application.yml` aún conserva el valor local
+  de respaldo `replace-me-in-local-env`: no lo uses fuera de desarrollo. El PR #198 elimina
+  ese respaldo; hasta que se integre, configura siempre un secreto real.
 
 El compose recomendado es el del repositorio `Docker-Infra-Guardian-Escolar`, porque inicia
 PostgreSQL, aplica Liquibase y después levanta la API. El backend independiente supone que la
@@ -38,7 +40,7 @@ base ya existe y que las migraciones ya fueron aplicadas.
 Para ejecutar solo el backend con PostgreSQL disponible:
 
 ```bash
-./mvnw spring-boot:run
+bash ./mvnw spring-boot:run
 ```
 
 En Windows:
@@ -50,7 +52,7 @@ En Windows:
 ## Validación
 
 ```bash
-./mvnw test
+bash ./mvnw test
 ```
 
 El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
