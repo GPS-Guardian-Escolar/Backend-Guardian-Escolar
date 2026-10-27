@@ -4,7 +4,6 @@ import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.Notification;
 import com.guardianescolar.api.modules.notifications.domain.NotificationReceipt;
 import com.guardianescolar.api.modules.notifications.domain.NotificationSettings;
-import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.repository.NotificationReceiptRepository;
 import com.guardianescolar.api.modules.notifications.repository.NotificationRepository;
@@ -16,7 +15,6 @@ import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
-import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private static final int INACTIVITY_DEDUPLICATION_MINUTES = 5;
-
     private final NotificationRepository notificationRepository;
     private final NotificationReceiptRepository notificationReceiptRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
