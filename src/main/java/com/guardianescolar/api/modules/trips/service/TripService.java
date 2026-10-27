@@ -57,10 +57,10 @@ public class TripService {
     @Transactional
     public TripDtos.TripResponse create(TripDtos.TripRequest request) {
         validateChildStudent(request.studentId());
+        Student student = studentService.getAllowed(request.studentId());
         if (tripRepository.existsByStudentIdAndStatusAndDeletedAtIsNull(request.studentId(), TripStatus.IN_PROGRESS)) {
             throw new IllegalArgumentException("The student already has an active trip");
         }
-        Student student = studentService.getAllowed(request.studentId());
         Route route = request.routeId() == null
                 ? studentRouteRepository.findByIdStudentIdAndIsActiveTrue(request.studentId()).stream()
                         .map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
