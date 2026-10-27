@@ -1,7 +1,11 @@
 package com.guardianescolar.api.modules.notifications.controller;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
 
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.service.UserDeviceService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -19,15 +23,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/devices")
 @RequiredArgsConstructor
+@Tag(name = "User devices", description = "Push notification device registration")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Solicitud inválida o parámetros no válidos"),
+    @ApiResponse(responseCode = "401", description = "Se requiere autenticación"),
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+})
 public class UserDeviceController {
 
     private final UserDeviceService userDeviceService;
 
+    @Operation(summary = "Listar dispositivos actuales")
     @GetMapping
     public List<NotificationDtos.DeviceResponse> listarActuales() {
         return userDeviceService.listarActuales();
     }
 
+    @Operation(summary = "Registrar una cuenta")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public NotificationDtos.DeviceResponse register(
@@ -35,6 +47,7 @@ public class UserDeviceController {
         return userDeviceService.register(request);
     }
 
+    @Operation(summary = "Desactivar dispositivo")
     @DeleteMapping("/{dispositivoId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void desactivar(@PathVariable UUID dispositivoId) {

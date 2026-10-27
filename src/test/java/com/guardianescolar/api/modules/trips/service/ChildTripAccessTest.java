@@ -11,6 +11,8 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.students.domain.Student;
 import com.guardianescolar.api.modules.students.domain.StudentDevice;
 import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
+import com.guardianescolar.api.modules.students.repository.StudentRepository;
+import com.guardianescolar.api.modules.students.service.StudentAccessService;
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.trips.domain.TripStatus;
@@ -34,7 +36,8 @@ class ChildTripAccessTest {
     private final TripRepository trips = mock(TripRepository.class);
     private final CurrentUserService current = mock(CurrentUserService.class);
     private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class),
-            mock(StudentRouteRepository.class), mock(StudentService.class), mock(RouteService.class), current,
+            mock(StudentRouteRepository.class), mock(StudentService.class), mock(StudentRepository.class),
+            mock(StudentAccessService.class), mock(RouteService.class), current,
             mock(NotificationService.class), mock(TripAlertService.class), mock(TripMapper.class),
             mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
     private Student student;
