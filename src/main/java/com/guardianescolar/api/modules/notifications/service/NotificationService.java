@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private static final int INACTIVITY_DEDUPLICATION_MINUTES = 5;
-
     private final NotificationRepository notificationRepository;
     private final NotificationReceiptRepository notificationReceiptRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;

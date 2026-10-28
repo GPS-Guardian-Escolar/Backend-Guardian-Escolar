@@ -19,6 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import com.guardianescolar.api.modules.auth.service.EmailUnavailableException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -69,6 +73,34 @@ public class ApiExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 "Solicitud inválida",
                 errors));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableMessage(
+            HttpMessageNotReadableException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.BAD_REQUEST, "El cuerpo de la solicitud no es válido");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "El método HTTP no está permitido para este recurso");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "El tipo de contenido no está soportado");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleMissingResource(
+            NoResourceFoundException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.NOT_FOUND, "Recurso no encontrado");
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
