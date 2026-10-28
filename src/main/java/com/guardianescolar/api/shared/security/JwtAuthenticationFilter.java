@@ -10,6 +10,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -49,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         && userDetails.isAccountNonExpired()
                         && userDetails.isCredentialsNonExpired()
                         && jwtService.isTokenValid(token, userDetails)
-                        && (childToken || userSessionRepository.existsByTokenAndSessionStatus(token, SessionStatus.ACTIVE))) {
+                        && (childToken || userSessionRepository.existsByTokenAndSessionStatus(hashSessionToken(token), SessionStatus.ACTIVE))) {
                     var authorities = childToken
                             ? java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("CHILD_DEVICE"))
                             : userDetails.getAuthorities();
@@ -68,5 +72,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String hashSessionToken(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 }
