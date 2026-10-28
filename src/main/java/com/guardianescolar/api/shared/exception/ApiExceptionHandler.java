@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
 import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
 import com.guardianescolar.api.modules.auth.service.DeviceConfirmationRequiredException;
+import com.guardianescolar.api.modules.auth.service.AuthRateLimitException;
 import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import com.guardianescolar.api.modules.maps.exception.MapsRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import com.guardianescolar.api.modules.auth.service.EmailUnavailableException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -70,6 +75,34 @@ public class ApiExceptionHandler {
                 errors));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableMessage(
+            HttpMessageNotReadableException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.BAD_REQUEST, "El cuerpo de la solicitud no es válido");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "El método HTTP no está permitido para este recurso");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "El tipo de contenido no está soportado");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleMissingResource(
+            NoResourceFoundException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return build(HttpStatus.NOT_FOUND, "Recurso no encontrado");
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException exception, HttpServletRequest request) {
         errorLogService.register(exception, request);
@@ -95,6 +128,18 @@ public class ApiExceptionHandler {
         errorLogService.register(exception, request);
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfter().toSeconds()))
+                .body(new ApiError(
+                        OffsetDateTime.now(),
+                        HttpStatus.TOO_MANY_REQUESTS.value(),
+                        exception.getMessage(),
+                        List.of()));
+    }
+
+    @ExceptionHandler(AuthRateLimitException.class)
+    public ResponseEntity<ApiError> handleAuthRateLimit(AuthRateLimitException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, "900")
                 .body(new ApiError(
                         OffsetDateTime.now(),
                         HttpStatus.TOO_MANY_REQUESTS.value(),
