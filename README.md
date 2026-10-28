@@ -1,4 +1,4 @@
-# HU-20 Backend Implementado
+# GPS Guardian Escolar Backend
 
 ## Objetivo
 
@@ -36,19 +36,34 @@ orden soportado es:
 El compose recomendado del repositorio `Docker-Infra-Guardian-Escolar` automatiza ese orden y
 espera a que Liquibase termine antes de iniciar el backend.
 
-## Validacion esperada
+## Requisitos y arranque
+
+- Java 17.
+- Maven Wrapper incluido (`mvnw` o `mvnw.cmd`).
+- PostgreSQL 15 con el esquema aplicado por Liquibase.
+- Variables de entorno definidas a partir de `.env.example`; `JWT_SECRET` debe contener al
+  menos 32 bytes aleatorios y es obligatorio. La configuración no tiene un valor de respaldo.
+
+Para ejecutar solo el backend con PostgreSQL disponible:
 
 ```bash
-./mvnw test
+bash ./mvnw spring-boot:run
 ```
 
-Resultado esperado:
+En Windows:
 
-```text
-Tests run: 3
-Failures: 0
-BUILD SUCCESS
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
+
+## Validación
+
+```bash
+bash ./mvnw test
+```
+
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores.
 
 ## Google Maps Platform
 
@@ -81,6 +96,13 @@ Content-Type: application/json
 ```
 
 Los endpoints requieren JWT y no exponen la API key al cliente.
+
+## Direcciones de origen y destino de rutas
+
+Las propiedades opcionales `originAddress` y `destinationAddress` se guardan en las columnas
+`routes.origin_address` y `routes.destination_address`. Antes de desplegar este cambio, aplica
+la migración `004l-ddl-add-route-addresses` del repositorio DB-Structure; sin esa migración,
+Hibernate no encontrará las columnas al leer o guardar rutas.
 
 ## Proveedores de correo
 
