@@ -59,11 +59,13 @@ En Windows:
 ## Validación
 
 Para una comprobación rápida:
-
 ```bash
 bash ./mvnw test
 ```
 
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores; el Dockerfile ejecuta estas pruebas
+durante el empaquetado.
 La puerta de calidad completa es `BUILD SUCCESS` y cero fallos con:
 
 ```bash
@@ -166,3 +168,4 @@ un correo con ese proveedor.
 La selección de proveedor conserva los flujos actuales de verificación de correo,
 recuperación de contraseña, confirmación de dispositivo, doble factor y notificaciones. No
 se incluyen claves en el código ni en `.env.example`.
+
