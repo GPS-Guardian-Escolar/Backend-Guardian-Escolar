@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import com.guardianescolar.api.modules.audit.service.ErrorLogService;
 import com.guardianescolar.api.modules.auth.service.EmailDeliveryException;
 import com.guardianescolar.api.modules.auth.service.DeviceConfirmationRequiredException;
+import com.guardianescolar.api.modules.auth.service.AuthRateLimitException;
 import com.guardianescolar.api.modules.maps.exception.MapsApiException;
 import com.guardianescolar.api.modules.maps.exception.MapsRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -127,6 +128,18 @@ public class ApiExceptionHandler {
         errorLogService.register(exception, request);
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfter().toSeconds()))
+                .body(new ApiError(
+                        OffsetDateTime.now(),
+                        HttpStatus.TOO_MANY_REQUESTS.value(),
+                        exception.getMessage(),
+                        List.of()));
+    }
+
+    @ExceptionHandler(AuthRateLimitException.class)
+    public ResponseEntity<ApiError> handleAuthRateLimit(AuthRateLimitException exception, HttpServletRequest request) {
+        errorLogService.register(exception, request);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, "900")
                 .body(new ApiError(
                         OffsetDateTime.now(),
                         HttpStatus.TOO_MANY_REQUESTS.value(),
