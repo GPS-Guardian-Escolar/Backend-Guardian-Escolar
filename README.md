@@ -85,6 +85,8 @@ y documenta esa limitación; no presentes una ejecución parcial como prueba com
 La puerta de calidad es `bash ./mvnw --batch-mode clean verify` o el workflow de CI. No uses el
 resultado de construir una imagen Docker como sustituto de esa validación: las opciones Maven del
 Dockerfile pueden cambiar según el flujo de despliegue.
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores.
 
 ## Google Maps Platform
 
