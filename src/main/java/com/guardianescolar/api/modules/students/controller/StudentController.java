@@ -131,4 +131,11 @@ public class StudentController {
             @RequestParam String code) {
         return studentService.linkedProfile(studentId, code);
     }
+
+    @Operation(summary = "Consultar perfil del dispositivo infantil autenticado")
+    @GetMapping("/child-profile")
+    @PreAuthorize("hasAuthority('CHILD_DEVICE')")
+    public StudentDtos.LinkedProfileResponse childProfile() {
+        return studentService.childProfile();
+    }
 }

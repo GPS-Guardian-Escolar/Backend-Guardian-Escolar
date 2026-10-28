@@ -14,6 +14,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +67,31 @@ public class StudentDeviceLinkService {
                 contact == null ? "" : contact.getPhone(),
                 contact == null ? "" : contact.getRelationship(),
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId));
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDtos.LinkedProfileResponse childProfile() {
+        Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
+        if (!(details instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails child)) {
+            throw new AccessDeniedException("Child device authentication required");
+        }
+
+        StudentDevice device = studentDeviceRepository.findByDeviceIdentifier(child.deviceIdentifier())
+                .filter(item -> Boolean.TRUE.equals(item.getIsActive()) && item.getDeletedAt() == null)
+                .filter(item -> item.getStudent() != null && child.studentId().equals(item.getStudent().getId()))
+                .orElseThrow(() -> new AccessDeniedException("The device is no longer linked"));
+        Student student = device.getStudent();
+        EmergencyContact contact = primaryContact(student.getId());
+        return new StudentDtos.LinkedProfileResponse(
+                student.getId(),
+                "",
+                student.getFullName(),
+                student.getSchoolGrade(),
+                student.getBirthDate(),
+                contact == null ? "" : contact.getFullName(),
+                contact == null ? "" : contact.getPhone(),
+                contact == null ? "" : contact.getRelationship(),
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()));
     }
 
     private StudentDevice resolveLinkableDevice(Student student, String deviceIdentifier) {

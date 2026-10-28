@@ -199,6 +199,11 @@ public class StudentService {
         return studentDeviceLinkService.linkedProfile(studentId, code);
     }
 
+    @Transactional(readOnly = true)
+    public StudentDtos.LinkedProfileResponse childProfile() {
+        return studentDeviceLinkService.childProfile();
+    }
+
     private Student findActive(UUID studentId) {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
