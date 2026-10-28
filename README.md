@@ -1,4 +1,4 @@
-# HU-20 Backend Implementado
+# GPS Guardian Escolar Backend
 
 ## Objetivo
 
@@ -23,19 +23,47 @@ Esta HU representa el estado final implementado del backend, incluyendo:
 - `.env.example` sin secretos reales.
 - Pruebas automatizadas existentes.
 
-## Validacion esperada
+## Dependencia de base de datos
+
+La API no crea el esquema PostgreSQL por sí sola. El esquema, roles, índices y datos iniciales
+se administran en `DB-Structure-Guardian-Escolar` mediante Liquibase. En un entorno local, el
+orden soportado es:
+
+1. Iniciar PostgreSQL.
+2. Ejecutar Liquibase con el changelog de la base de datos.
+3. Iniciar esta API con `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` apuntando a esa base.
+
+El compose recomendado del repositorio `Docker-Infra-Guardian-Escolar` automatiza ese orden y
+espera a que Liquibase termine antes de iniciar el backend.
+
+## Requisitos y arranque
+
+- Java 17.
+- Maven Wrapper incluido (`mvnw` o `mvnw.cmd`).
+- PostgreSQL 15 con el esquema aplicado por Liquibase.
+- Variables de entorno definidas a partir de `.env.example`; `JWT_SECRET` debe contener al
+  menos 32 bytes aleatorios y es obligatorio. La configuración no tiene un valor de respaldo.
+
+Para ejecutar solo el backend con PostgreSQL disponible:
 
 ```bash
-./mvnw test
+bash ./mvnw spring-boot:run
 ```
 
-Resultado esperado:
+En Windows:
 
-```text
-Tests run: 3
-Failures: 0
-BUILD SUCCESS
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
+
+## Validación
+
+```bash
+bash ./mvnw test
+```
+
+El resultado y el número de pruebas pueden variar a medida que se agregan regresiones. La
+validación mínima es `BUILD SUCCESS` sin fallos ni errores.
 
 ## Google Maps Platform
 
