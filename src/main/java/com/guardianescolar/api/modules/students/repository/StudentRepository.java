@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface StudentRepository extends JpaRepository<Student, UUID> {
 
+    long countByUserIdAndDeletedAtIsNull(UUID userId);
+
     List<Student> findByDeletedAtIsNullOrderByFullNameAsc();
 
     List<Student> findByUserEmailIgnoreCaseAndDeletedAtIsNullOrderByFullNameAsc(String email);
