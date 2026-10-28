@@ -59,7 +59,8 @@ class AuthServiceRegistrationTest {
                 userMapper,
                 roleProvisioningService,
                 deviceSessionService,
-                twoFactorService);
+                twoFactorService,
+                mock(AuthAttemptLimiter.class));
         request = new AuthDtos.RegisterRequest(
                 "Nicolas Ruiz",
                 "nicolas@example.com",
