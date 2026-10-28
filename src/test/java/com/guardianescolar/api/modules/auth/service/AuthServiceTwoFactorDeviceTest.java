@@ -53,7 +53,8 @@ class AuthServiceTwoFactorDeviceTest {
                 userMapper,
                 roleProvisioningService,
                 deviceSessionService,
-                twoFactorService);
+                twoFactorService,
+                mock(AuthAttemptLimiter.class));
     }
 
     @Test

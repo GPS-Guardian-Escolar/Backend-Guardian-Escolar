@@ -72,6 +72,9 @@ public class TripService {
     public TripDtos.TripResponse create(TripDtos.TripRequest request) {
         validateChildStudent(request.studentId());
         Student student = studentService.getAllowed(request.studentId());
+        if (tripRepository.existsByStudentIdAndStatusAndDeletedAtIsNull(request.studentId(), TripStatus.IN_PROGRESS)) {
+            throw new IllegalArgumentException("The student already has an active trip");
+        }
         Route route = request.routeId() == null
                 ? studentRouteRepository.findByIdStudentIdAndIsActiveTrue(request.studentId()).stream()
                         .map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
@@ -101,6 +104,9 @@ public class TripService {
     @Transactional
     public TripDtos.TripResponse changeStatus(UUID tripId, TripDtos.ChangeStatusRequest request) {
         Trip trip = getAllowed(tripId);
+        if (!isAllowedTransition(trip.getStatus(), request.status())) {
+            throw new IllegalArgumentException("Invalid trip status transition");
+        }
         if (SecurityContextHolder.getContext().getAuthentication().getDetails()
                 instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails) {
             if (request.status() != TripStatus.COMPLETED && request.status() != TripStatus.CANCELED) {
@@ -118,6 +124,15 @@ public class TripService {
             trip.setTripEndedAt(OffsetDateTime.now());
         }
         return tripMapper.toResponse(tripRepository.save(trip));
+    }
+
+    private boolean isAllowedTransition(TripStatus current, TripStatus requested) {
+        if (current == requested) {
+            return true;
+        }
+        return (current == TripStatus.PENDING && requested == TripStatus.IN_PROGRESS)
+                || (current == TripStatus.IN_PROGRESS
+                        && (requested == TripStatus.COMPLETED || requested == TripStatus.CANCELED));
     }
 
     @Transactional
