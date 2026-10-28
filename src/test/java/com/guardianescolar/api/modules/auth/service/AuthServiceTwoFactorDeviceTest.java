@@ -36,6 +36,7 @@ class AuthServiceTwoFactorDeviceTest {
     @Mock RoleProvisioningService roleProvisioningService;
     @Mock DeviceSessionService deviceSessionService;
     @Mock TwoFactorService twoFactorService;
+    @Mock AuthAttemptLimiter authAttemptLimiter;
 
     private AuthService authService;
 
@@ -54,7 +55,7 @@ class AuthServiceTwoFactorDeviceTest {
                 roleProvisioningService,
                 deviceSessionService,
                 twoFactorService,
-                mock(AuthAttemptLimiter.class));
+                authAttemptLimiter);
     }
 
     @Test

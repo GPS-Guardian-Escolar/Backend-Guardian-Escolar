@@ -40,6 +40,7 @@ class AuthServiceRegistrationTest {
     @Mock RoleProvisioningService roleProvisioningService;
     @Mock DeviceSessionService deviceSessionService;
     @Mock TwoFactorService twoFactorService;
+    @Mock AuthAttemptLimiter authAttemptLimiter;
 
     private AuthService authService;
     private AuthDtos.RegisterRequest request;
@@ -60,7 +61,7 @@ class AuthServiceRegistrationTest {
                 roleProvisioningService,
                 deviceSessionService,
                 twoFactorService,
-                mock(AuthAttemptLimiter.class));
+                authAttemptLimiter);
         request = new AuthDtos.RegisterRequest(
                 "Nicolas Ruiz",
                 "nicolas@example.com",
