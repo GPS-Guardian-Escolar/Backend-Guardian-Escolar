@@ -4,6 +4,7 @@ import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.Notification;
 import com.guardianescolar.api.modules.notifications.domain.NotificationReceipt;
 import com.guardianescolar.api.modules.notifications.domain.NotificationSettings;
+import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.repository.NotificationReceiptRepository;
 import com.guardianescolar.api.modules.notifications.repository.NotificationRepository;
@@ -12,8 +13,10 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private static final int INACTIVITY_DEDUPLICATION_MINUTES = 5;
     private final NotificationRepository notificationRepository;
     private final NotificationReceiptRepository notificationReceiptRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
     private final CurrentUserService currentUserService;
     private final NotificationDeliveryService notificationDeliveryService;
     private final NotificationMapper notificationMapper;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<NotificationDtos.NotificationResponse> listForCurrentUser() {
@@ -89,6 +94,14 @@ public class NotificationService {
             User user,
             String eventType,
             String message) {
+        if (NotificationEventTypes.INACTIVITY.equals(eventType)) {
+            lockInactivityDeduplication(trip.getId(), eventType, user.getId());
+            if (notificationRepository.existsRecentNotificationForUser(
+                    trip.getId(), eventType,
+                    OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES), user.getId())) {
+                return;
+            }
+        }
         Notification notification = saveNotification(trip, safeZone, eventType, message);
         saveReceipt(notification, user);
 
@@ -97,6 +110,13 @@ public class NotificationService {
             notification.setWasSent(true);
             notificationRepository.save(notification);
         }
+    }
+
+    private void lockInactivityDeduplication(UUID tripId, String eventType, UUID userId) {
+        entityManager.createNativeQuery(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(:deduplicationKey, 0))")
+                .setParameter("deduplicationKey", "notification:" + tripId + ":" + eventType + ":" + userId)
+                .getSingleResult();
     }
 
     private Notification saveNotification(Trip trip, SafeZone safeZone, String eventType, String message) {
