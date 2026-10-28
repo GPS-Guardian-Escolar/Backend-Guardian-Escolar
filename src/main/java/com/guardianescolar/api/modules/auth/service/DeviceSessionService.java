@@ -26,7 +26,10 @@ public class DeviceSessionService {
 
     public void validateDeviceLogin(User user, AuthDtos.LoginRequest request) {
         String deviceIdentifier = validationService.normalizeOptionalText(request.deviceIdentifier());
-        if (deviceIdentifier == null || isConfirmedDevice(user, deviceIdentifier) || !hasOtherConfirmedDevice(user, deviceIdentifier)) {
+        if (deviceIdentifier == null) {
+            throw new IllegalArgumentException("El identificador del dispositivo es obligatorio");
+        }
+        if (isConfirmedDevice(user, deviceIdentifier) || !hasOtherConfirmedDevice(user, deviceIdentifier)) {
             return;
         }
 

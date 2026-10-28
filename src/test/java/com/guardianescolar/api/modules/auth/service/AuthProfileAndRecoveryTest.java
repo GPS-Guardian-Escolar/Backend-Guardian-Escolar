@@ -37,7 +37,7 @@ class AuthProfileAndRecoveryTest {
                 passwordEncoder, mock(JwtService.class), mock(AuthenticationManager.class),
                 emailService, currentUserService, validationService, mock(AuthUserMapper.class),
                 mock(RoleProvisioningService.class), mock(DeviceSessionService.class),
-                mock(TwoFactorService.class));
+                mock(TwoFactorService.class), mock(AuthAttemptLimiter.class));
     }
 
     @Test
