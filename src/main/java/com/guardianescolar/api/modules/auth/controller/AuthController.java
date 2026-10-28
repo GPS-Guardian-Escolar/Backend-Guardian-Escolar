@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -78,6 +79,12 @@ public class AuthController {
     public AuthDtos.MessageResponse cambiarPassword(
             @Valid @RequestBody AuthDtos.ChangePasswordRequest request) {
         return authService.cambiarPassword(request);
+    }
+
+    @PostMapping("/logout")
+    public AuthDtos.MessageResponse logout(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return authService.logout(authorizationHeader);
     }
 
     @PostMapping("/2fa/request")
