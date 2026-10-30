@@ -29,8 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StudentService {
 
-    private static final int MIN_STUDENT_AGE = 3;
-    private static final int MAX_STUDENT_AGE = 21;
+    private static final int MIN_STUDENT_AGE = 5;
+    private static final int MAX_STUDENT_AGE = 18;
+    private static final int MAX_ACTIVE_CHILDREN_PER_GUARDIAN = 20;
 
     private final StudentRepository studentRepository;
     private final EmergencyContactRepository emergencyContactRepository;
@@ -63,6 +64,12 @@ public class StudentService {
         User current = currentUserService.currentUser();
         Student student = new Student();
         User owner = resolveOwner(request.userId(), current);
+        owner = userRepository.findByIdForUpdate(owner.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Owner user not found"));
+        if (studentRepository.countByUserIdAndDeletedAtIsNull(owner.getId()) >= MAX_ACTIVE_CHILDREN_PER_GUARDIAN) {
+            throw new IllegalArgumentException("This account has reached the limit of "
+                    + MAX_ACTIVE_CHILDREN_PER_GUARDIAN + " active students");
+        }
         validateUniqueName(owner, request.fullName(), null);
         student.setUser(owner);
         applyData(student, request);
@@ -192,6 +199,11 @@ public class StudentService {
         return studentDeviceLinkService.linkedProfile(studentId, code);
     }
 
+    @Transactional(readOnly = true)
+    public StudentDtos.LinkedProfileResponse childProfile() {
+        return studentDeviceLinkService.childProfile();
+    }
+
     private Student findActive(UUID studentId) {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
@@ -238,8 +250,8 @@ public class StudentService {
 
     private int[] ageRangeForSchoolGrade(SchoolGrade grade) {
         return switch (grade) {
-            case PRE_KINDER -> new int[] { 3, 5 };
-            case KINDER -> new int[] { 4, 6 };
+            case PRE_KINDER -> new int[] { 5, 5 };
+            case KINDER -> new int[] { 5, 6 };
             case TRANSITION -> new int[] { 5, 7 };
             case FIRST -> new int[] { 6, 8 };
             case SECOND -> new int[] { 7, 9 };
@@ -251,7 +263,7 @@ public class StudentService {
             case EIGHTH -> new int[] { 13, 15 };
             case NINTH -> new int[] { 14, 16 };
             case TENTH -> new int[] { 15, 17 };
-            case ELEVENTH -> new int[] { 16, 21 };
+            case ELEVENTH -> new int[] { 16, 18 };
         };
     }
 

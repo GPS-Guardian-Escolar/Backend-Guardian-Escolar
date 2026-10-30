@@ -39,6 +39,8 @@ class StudentTransactionTest {
     private StudentRepository students;
     private EmergencyContactRepository contacts;
     private StudentService service;
+    private User owner;
+    private UserRepository users;
     private Student savedStudent;
     private EmergencyContact savedContact;
     private boolean failContact;
@@ -53,9 +55,12 @@ class StudentTransactionTest {
         students = mock(StudentRepository.class);
         contacts = mock(EmergencyContactRepository.class);
         CurrentUserService current = mock(CurrentUserService.class);
-        User owner = new User();
+        owner = new User();
         owner.setId(UUID.randomUUID());
         when(current.currentUser()).thenReturn(owner);
+        users = mock(UserRepository.class);
+        when(users.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        when(students.countByUserIdAndDeletedAtIsNull(owner.getId())).thenReturn(0L);
         when(students.save(any(Student.class))).thenAnswer(invocation -> {
             savedStudent = invocation.getArgument(0);
             if (savedStudent.getId() == null) savedStudent.setId(UUID.randomUUID());
@@ -71,7 +76,7 @@ class StudentTransactionTest {
             return savedContact;
         });
         StudentService target = new StudentService(students, contacts, mock(StudentDeviceRepository.class),
-                mock(UserRepository.class), mock(RouteRepository.class), mock(StudentRouteRepository.class),
+                users, mock(RouteRepository.class), mock(StudentRouteRepository.class),
                 current, mock(StudentMapper.class), mock(StudentAccessService.class),
                 mock(StudentGuardianService.class), mock(StudentDeviceLinkService.class), mock(StudentLinkCodeService.class));
         TransactionInterceptor transactions = new TransactionInterceptor();
@@ -95,6 +100,23 @@ class StudentTransactionTest {
         assertEquals(1, jdbc.queryForObject("select count(*) from students", Integer.class));
         assertEquals(1, jdbc.queryForObject("select count(*) from contacts", Integer.class));
         assertEquals(savedStudent.getId(), savedContact.getStudent().getId());
+    }
+
+    @Test
+    void rejectsStudentCreationWhenGuardianAlreadyHasTwentyActiveChildren() {
+        when(students.countByUserIdAndDeletedAtIsNull(owner.getId())).thenReturn(20L);
+        assertThrows(IllegalArgumentException.class, () -> service.create(request("Ana Perez", "Maria Perez")));
+        assertEquals(0, jdbc.queryForObject("select count(*) from students", Integer.class));
+    }
+
+    @Test
+    void rejectsStudentsUnderFiveBeforeWritingEitherRecord() {
+        var request = new StudentDtos.StudentRequest(null, "Ana Perez", SchoolGrade.PRE_KINDER,
+                LocalDate.now().minusYears(4), null,
+                new EmergencyContactDtos.EmergencyContactRequest("Maria Perez", "3001234567", "Guardian", true));
+        assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        assertEquals(0, jdbc.queryForObject("select count(*) from students", Integer.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from contacts", Integer.class));
     }
 
     @Test
