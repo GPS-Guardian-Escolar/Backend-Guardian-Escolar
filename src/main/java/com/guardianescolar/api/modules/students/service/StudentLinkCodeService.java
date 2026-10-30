@@ -4,6 +4,7 @@ import com.guardianescolar.api.modules.students.domain.Student;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,25 @@ public class StudentLinkCodeService {
     @Transactional
     public void verify(Student student, String code) {
         validate(student, code);
+    }
+
+    @Transactional(readOnly = true)
+    public Student resolveStudent(String rawCode) {
+        String code = rawCode == null ? "" : rawCode.trim().toUpperCase();
+        OffsetDateTime now = OffsetDateTime.now();
+        List<Student> candidates = studentRepository.findByDeletedAtIsNullOrderByFullNameAsc();
+
+        return candidates.stream()
+                .filter(student -> Boolean.TRUE.equals(student.getIsActive()))
+                .filter(student -> student.getLinkCodeHash() != null)
+                .filter(student -> student.getLinkCodeUsedAt() == null)
+                .filter(student -> student.getLinkCodeExpiresAt() != null
+                        && student.getLinkCodeExpiresAt().isAfter(now))
+                .filter(student -> (student.getLinkCodeFailedAttempts() == null
+                        ? 0 : student.getLinkCodeFailedAttempts()) < MAX_ATTEMPTS)
+                .filter(student -> passwordEncoder.matches(code, student.getLinkCodeHash()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired link code"));
     }
 
     private void validate(Student student, String rawCode) {

@@ -65,7 +65,7 @@ public final class StudentDtos {
     }
 
     public record LinkDeviceRequest(
-            @NotNull UUID studentId,
+            UUID studentId,
             @NotBlank @Size(min = 8, max = 32) String code,
             @NotBlank @Size(min = 8, max = 160) String deviceIdentifier,
             @NotBlank @Pattern(regexp = "ANDROID|IOS|WEB", message = "platform debe ser ANDROID, IOS o WEB") String platform,

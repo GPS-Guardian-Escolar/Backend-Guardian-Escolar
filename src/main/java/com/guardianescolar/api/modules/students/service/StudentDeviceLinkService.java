@@ -30,7 +30,9 @@ public class StudentDeviceLinkService {
 
     @Transactional
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
-        Student student = findStudent(request.studentId());
+        Student student = request.studentId() == null
+                ? studentLinkCodeService.resolveStudent(request.code())
+                : findStudent(request.studentId());
         studentLinkCodeService.consume(student, request.code());
 
         OffsetDateTime now = OffsetDateTime.now();
