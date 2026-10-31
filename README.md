@@ -82,6 +82,14 @@ Get-ChildItem target\surefire-reports\*.txt | Get-Content | Select-String "Tests
 Si el entorno local no tiene Docker/PostgreSQL disponible, ejecuta al menos la fase de compilación
 y documenta esa limitación; no presentes una ejecución parcial como prueba completa.
 
+## Functional requirements and traceability
+
+The versioned specification for users, scope, contracts, active stories, acceptance criteria,
+and reproducible evidence is available in
+[`docs/PRODUCT_REQUIREMENTS.md`](docs/PRODUCT_REQUIREMENTS.md). Every functional change must
+link its issue and pull request, update its evidence, and pass review before entering a
+protected delivery branch.
+
 ## Imagen Docker
 
 La puerta de calidad es `bash ./mvnw --batch-mode clean verify` o el workflow de CI. No uses el
