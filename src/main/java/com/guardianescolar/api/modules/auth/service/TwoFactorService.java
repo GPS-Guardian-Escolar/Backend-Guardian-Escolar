@@ -4,6 +4,7 @@ import com.guardianescolar.api.modules.auth.dto.AuthDtos;
 import com.guardianescolar.api.modules.security.domain.TwoFactorMethods;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -29,24 +30,26 @@ public class TwoFactorService {
     private final EmailService emailService;
     private final AuthValidationService validationService;
     private final AuthAttemptLimiter attemptLimiter;
+    private final TransientTokenHashService transientTokenHashService;
 
-    public void prepareAndSend(User user, String method) {
-        prepareCode(user, method);
+    public String prepareAndSend(User user, String method) {
+        String rawToken = prepareCode(user, method);
         userRepository.save(user);
         sendCode(user);
+        return rawToken;
     }
 
     public AuthDtos.TwoFactorChallengeResponse request(User user, String method) {
         recordChallengeRequest(user);
         String normalizedMethod = validationService.normalizeTwoFactorMethod(method);
         validationService.validateTwoFactorMethodAvailable(user, normalizedMethod);
-        prepareAndSend(user, normalizedMethod);
-        return challengeResponse("Codigo de verificacion enviado", user);
+        String rawToken = prepareAndSend(user, normalizedMethod);
+        return challengeResponse("Codigo de verificacion enviado", rawToken, user.getTwoFactorMethod());
     }
 
     public AuthDtos.TwoFactorChallengeResponse resend(AuthDtos.ResendTwoFactorRequest request) {
         limitVerifyByIp();
-        User user = userRepository.findByTwoFactorToken(request.token())
+        User user = userRepository.findByTwoFactorToken(transientTokenHashService.hash(request.token()))
                 .orElseThrow(() -> {
                     recordVerifyFailureByIp();
                     return new IllegalArgumentException("Token de verificacion 2FA invalido");
@@ -54,13 +57,13 @@ public class TwoFactorService {
         recordChallengeRequest(user);
         String method = validationService.normalizeTwoFactorMethod(user.getTwoFactorMethod());
         validationService.validateTwoFactorMethodAvailable(user, method);
-        prepareAndSend(user, method);
-        return challengeResponse("Codigo de verificacion reenviado", user);
+        String rawToken = prepareAndSend(user, method);
+        return challengeResponse("Codigo de verificacion reenviado", rawToken, user.getTwoFactorMethod());
     }
 
     public User verify(AuthDtos.VerifyTwoFactorRequest request) {
         limitVerifyByIp();
-        User user = userRepository.findByTwoFactorToken(request.token())
+        User user = userRepository.findByTwoFactorToken(transientTokenHashService.hash(request.token()))
                 .orElseThrow(() -> {
                     recordVerifyFailureByIp();
                     return new IllegalArgumentException("Token de verificacion 2FA invalido");
@@ -81,11 +84,13 @@ public class TwoFactorService {
         return userRepository.save(user);
     }
 
-    private void prepareCode(User user, String method) {
+    private String prepareCode(User user, String method) {
         user.setTwoFactorMethod(validationService.normalizeTwoFactorMethod(method));
         user.setTwoFactorCode(String.format("%06d", RANDOM.nextInt(1_000_000)));
-        user.setTwoFactorToken(UUID.randomUUID().toString());
+        String rawToken = UUID.randomUUID().toString();
+        user.setTwoFactorToken(transientTokenHashService.hash(rawToken));
         user.setTwoFactorExpiresAt(OffsetDateTime.now().plusMinutes(TWO_FACTOR_EXPIRATION_MINUTES));
+        return rawToken;
     }
 
     private void sendCode(User user) {
@@ -138,10 +143,10 @@ public class TwoFactorService {
         user.setTwoFactorExpiresAt(null);
     }
 
-    private AuthDtos.TwoFactorChallengeResponse challengeResponse(String message, User user) {
+    private AuthDtos.TwoFactorChallengeResponse challengeResponse(String message, String token, String method) {
         return new AuthDtos.TwoFactorChallengeResponse(
                 message,
-                user.getTwoFactorToken(),
-                user.getTwoFactorMethod());
+                token,
+                method);
     }
 }

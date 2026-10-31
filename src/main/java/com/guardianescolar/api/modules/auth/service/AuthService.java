@@ -6,6 +6,7 @@ import com.guardianescolar.api.modules.notifications.repository.NotificationSett
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -42,6 +43,7 @@ public class AuthService {
     private final DeviceSessionService deviceSessionService;
     private final TwoFactorService twoFactorService;
     private final AuthAttemptLimiter attemptLimiter;
+    private final TransientTokenHashService transientTokenHashService;
 
     @Transactional
     public AuthDtos.AuthResponse register(AuthDtos.RegisterRequest request) {
@@ -68,7 +70,8 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setIsActive(false);
         user.setEmailVerified(false);
-        user.setEmailVerificationToken(generateToken());
+        String verificationToken = generateToken();
+        user.setEmailVerificationToken(transientTokenHashService.hash(verificationToken));
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         user.setTermsAccepted(true);
         user.setTermsAcceptedAt(OffsetDateTime.now());
@@ -82,7 +85,7 @@ public class AuthService {
 
         emailService.enviarVerificacionEmail(
                 user.getEmail(),
-                user.getEmailVerificationToken(),
+                verificationToken,
                 validationService.normalizeReturnUrl(request.returnUrl()));
         return authResponse("", 0, userMapper.toUserResponse(user), false, null, null);
     }
@@ -113,8 +116,8 @@ public class AuthService {
         deviceSessionService.validateDeviceLogin(user, request);
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
-            return authResponse("", 0, userMapper.toUserResponse(user), true, user.getTwoFactorToken(), user.getTwoFactorMethod());
+            String twoFactorToken = twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
+            return authResponse("", 0, userMapper.toUserResponse(user), true, twoFactorToken, user.getTwoFactorMethod());
         }
 
         String token = jwtService.generateToken(user);
@@ -123,7 +126,7 @@ public class AuthService {
     }
     @Transactional
     public AuthDtos.MessageResponse verificarEmail(String token) {
-        User user = userRepository.findByEmailVerificationToken(token)
+        User user = userRepository.findByEmailVerificationToken(transientTokenHashService.hash(token))
                 .orElseThrow(() -> new IllegalArgumentException("Token de verificación inválido"));
         validateEmailVerificationToken(user);
 
@@ -158,10 +161,11 @@ public class AuthService {
         userRepository.findByEmailIgnoreCase(email)
                 .filter(User::getIsActive)
                 .ifPresent(user -> {
-                    user.setPasswordResetToken(generateToken());
+                    String resetToken = generateToken();
+                    user.setPasswordResetToken(transientTokenHashService.hash(resetToken));
                     user.setPasswordResetExpiresAt(OffsetDateTime.now().plusMinutes(30));
                     userRepository.save(user);
-                    emailService.enviarRestablecimientoPassword(user.getEmail(), user.getPasswordResetToken());
+                    emailService.enviarRestablecimientoPassword(user.getEmail(), resetToken);
                 });
         return new AuthDtos.MessageResponse("Si el email existe, recibira instrucciones para restablecer la contrasena");
     }
@@ -173,7 +177,7 @@ public class AuthService {
     @Transactional
     public AuthDtos.MessageResponse restablecerPassword(AuthDtos.ResetPasswordRequest request) {
         validationService.validatePasswordPolicy(request.newPassword());
-        User user = userRepository.findByPasswordResetToken(request.token())
+        User user = userRepository.findByPasswordResetToken(transientTokenHashService.hash(request.token()))
                 .orElseThrow(() -> new IllegalArgumentException("Token de restablecimiento inválido"));
         validatePasswordResetToken(user);
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
@@ -215,11 +219,12 @@ public class AuthService {
 
         user.setEmail(newEmail);
         user.setEmailVerified(false);
-        user.setEmailVerificationToken(generateToken());
+        String verificationToken = generateToken();
+        user.setEmailVerificationToken(transientTokenHashService.hash(verificationToken));
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         User saved = userRepository.save(user);
         deviceSessionService.revokeAllSessions(user);
-        emailService.enviarVerificacionEmail(saved.getEmail(), saved.getEmailVerificationToken(), null);
+        emailService.enviarVerificacionEmail(saved.getEmail(), verificationToken, null);
         return userMapper.toUserResponse(saved);
     }
 

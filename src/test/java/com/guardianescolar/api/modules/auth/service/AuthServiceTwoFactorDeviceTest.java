@@ -12,6 +12,7 @@ import com.guardianescolar.api.modules.notifications.repository.NotificationSett
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class AuthServiceTwoFactorDeviceTest {
     @Mock DeviceSessionService deviceSessionService;
     @Mock TwoFactorService twoFactorService;
     @Mock AuthAttemptLimiter authAttemptLimiter;
+    @Mock TransientTokenHashService transientTokenHashService;
 
     private AuthService authService;
 
@@ -55,7 +57,8 @@ class AuthServiceTwoFactorDeviceTest {
                 roleProvisioningService,
                 deviceSessionService,
                 twoFactorService,
-                authAttemptLimiter);
+                authAttemptLimiter,
+                transientTokenHashService);
     }
 
     @Test
