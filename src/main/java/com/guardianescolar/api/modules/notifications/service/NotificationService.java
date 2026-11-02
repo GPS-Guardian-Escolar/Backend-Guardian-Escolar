@@ -53,6 +53,15 @@ public class NotificationService {
     }
 
     @Transactional
+    public void deleteForCurrentUser(UUID receiptId) {
+        User current = currentUserService.currentUser();
+        NotificationReceipt receipt = notificationReceiptRepository
+                .findByIdAndUserEmailIgnoreCase(receiptId, current.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        notificationReceiptRepository.delete(receipt);
+    }
+
+    @Transactional
     public int markAllAsRead() {
         User current = currentUserService.currentUser();
         List<NotificationReceipt> receipts =
