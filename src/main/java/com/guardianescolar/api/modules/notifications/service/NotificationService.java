@@ -13,6 +13,8 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +43,11 @@ public class NotificationService {
                 .stream()
                 .map(notificationMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<NotificationDtos.NotificationResponse> listPage(int page, int size) {
+        return Pagination.slice(listForCurrentUser(), page, size);
     }
 
     @Transactional
