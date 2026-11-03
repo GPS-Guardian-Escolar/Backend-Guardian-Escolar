@@ -13,6 +13,8 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
@@ -43,6 +45,11 @@ public class NotificationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<NotificationDtos.NotificationResponse> listPage(int page, int size) {
+        return Pagination.slice(listForCurrentUser(), page, size);
+    }
+
     @Transactional
     public NotificationDtos.NotificationResponse markAsRead(UUID receiptId) {
         User current = currentUserService.currentUser();
@@ -50,6 +57,15 @@ public class NotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
         receipt.markAsRead();
         return notificationMapper.toResponse(notificationReceiptRepository.save(receipt));
+    }
+
+    @Transactional
+    public void deleteForCurrentUser(UUID receiptId) {
+        User current = currentUserService.currentUser();
+        NotificationReceipt receipt = notificationReceiptRepository
+                .findByIdAndUserEmailIgnoreCase(receiptId, current.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        notificationReceiptRepository.delete(receipt);
     }
 
     @Transactional

@@ -18,6 +18,8 @@ import com.guardianescolar.api.modules.trips.dto.TripDtos;
 import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
 import com.guardianescolar.api.modules.trips.repository.TripRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import java.time.OffsetDateTime;
 import java.time.Duration;
 import java.util.List;
@@ -66,6 +68,11 @@ public class TripService {
                     : tripRepository.findByStudentIdInAndDeletedAtIsNullOrderByTripStartedAtDesc(visibleStudentIds);
         }
         return trips.stream().map(tripMapper::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TripDtos.TripResponse> listPage(int page, int size) {
+        return Pagination.slice(list(), page, size);
     }
 
     @Transactional
@@ -175,6 +182,11 @@ public class TripService {
         return coordinateRepository.findByTripIdOrderByRecordedAtAsc(tripId).stream()
                 .map(tripMapper::toCoordinateResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TripDtos.CoordinateResponse> listCoordinatesPage(UUID tripId, int page, int size) {
+        return Pagination.slice(listCoordinates(tripId), page, size);
     }
 
     private Trip getAllowed(UUID tripId) {

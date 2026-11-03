@@ -16,6 +16,8 @@ import com.guardianescolar.api.modules.students.dto.StudentDtos;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
 import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Period;
@@ -56,6 +58,11 @@ public class StudentService {
                 .stream()
                 .map(studentMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StudentDtos.StudentResponse> listPage(int page, int size) {
+        return Pagination.slice(list(), page, size);
     }
 
     @Transactional

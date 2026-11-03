@@ -4,7 +4,6 @@ import com.guardianescolar.api.modules.security.domain.TwoFactorMethods;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import java.util.Hashtable;
-import java.util.Set;
 import java.util.regex.Pattern;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -23,8 +22,6 @@ public class AuthValidationService {
     private static final Pattern HAS_SYMBOL = Pattern.compile(".*[^a-zA-Z0-9].*");
     private static final Pattern STRICT_EMAIL = Pattern.compile(
             "^[a-z0-9](?:[a-z0-9._%+-]{0,62}[a-z0-9])?@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,24}$");
-    private static final Set<String> SUPPORTED_EMAIL_TLDS = Set.of(
-            "com", "co", "edu", "org", "net", "gov", "mil", "info", "io", "app", "dev", "es");
     private static final int PASSWORD_MIN_LENGTH = 8;
     private static final int MAX_USERS_PER_PHONE = 3;
 
@@ -58,10 +55,6 @@ public class AuthValidationService {
             throw new IllegalArgumentException("Ingresa un correo electrónico válido");
         }
         String domain = email.substring(email.indexOf('@') + 1);
-        String tld = domain.substring(domain.lastIndexOf('.') + 1);
-        if (!SUPPORTED_EMAIL_TLDS.contains(tld)) {
-            throw new IllegalArgumentException("El dominio del correo no está permitido");
-        }
         if (!domainAcceptsMail(domain)) {
             throw new IllegalArgumentException("El dominio del correo no parece válido o no recibe emails");
         }

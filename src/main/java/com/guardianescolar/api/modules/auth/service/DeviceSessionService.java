@@ -5,6 +5,7 @@ import com.guardianescolar.api.modules.security.domain.SessionStatus;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.domain.UserSession;
 import com.guardianescolar.api.modules.security.repository.UserSessionRepository;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,6 +24,7 @@ public class DeviceSessionService {
     private final UserSessionRepository userSessionRepository;
     private final EmailService emailService;
     private final AuthValidationService validationService;
+    private final TransientTokenHashService transientTokenHashService;
 
     public void validateDeviceLogin(User user, AuthDtos.LoginRequest request) {
         String deviceIdentifier = validationService.normalizeOptionalText(request.deviceIdentifier());
@@ -36,14 +38,14 @@ public class DeviceSessionService {
         String confirmationToken = UUID.randomUUID().toString();
         UserSession sessionRequest = pendingSession(user, deviceIdentifier);
         sessionRequest.setUser(user);
-        sessionRequest.setToken("PENDING_DEVICE_CONFIRMATION:" + confirmationToken);
+        sessionRequest.setToken("PENDING_DEVICE_CONFIRMATION:" + transientTokenHashService.hash(confirmationToken));
         sessionRequest.setDeviceIdentifier(deviceIdentifier);
         sessionRequest.setDeviceName(validationService.normalizeOptionalText(request.deviceName()));
         sessionRequest.setPlatform(validationService.normalizeOptionalText(request.platform()));
         sessionRequest.setDeviceConfirmationReturnUrl(validationService.normalizeReturnUrl(request.returnUrl()));
         sessionRequest.setSessionStatus(SessionStatus.EXPIRED);
         sessionRequest.setEmailConfirmed(false);
-        sessionRequest.setDeviceConfirmationToken(confirmationToken);
+        sessionRequest.setDeviceConfirmationToken(transientTokenHashService.hash(confirmationToken));
         sessionRequest.setDeviceConfirmationExpiresAt(
                 OffsetDateTime.now().plusMinutes(DEVICE_CONFIRMATION_EXPIRATION_MINUTES));
         userSessionRepository.save(sessionRequest);
@@ -89,7 +91,7 @@ public class DeviceSessionService {
     }
 
     public AuthDtos.MessageResponse confirmLogin(String token) {
-        UserSession session = userSessionRepository.findFirstByDeviceConfirmationToken(token)
+        UserSession session = userSessionRepository.findFirstByDeviceConfirmationToken(transientTokenHashService.hash(token))
                 .orElseThrow(() -> new IllegalArgumentException("Token de confirmación inválido"));
 
         if (session.getDeviceConfirmationExpiresAt() == null

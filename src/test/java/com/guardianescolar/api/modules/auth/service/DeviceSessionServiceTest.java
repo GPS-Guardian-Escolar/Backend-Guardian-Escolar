@@ -15,6 +15,7 @@ import com.guardianescolar.api.modules.security.domain.SessionStatus;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.domain.UserSession;
 import com.guardianescolar.api.modules.security.repository.UserSessionRepository;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +35,8 @@ class DeviceSessionServiceTest {
         repository = mock(UserSessionRepository.class);
         emailService = mock(EmailService.class);
         validationService = mock(AuthValidationService.class);
-        service = new DeviceSessionService(repository, emailService, validationService);
+        service = new DeviceSessionService(repository, emailService, validationService,
+                new TransientTokenHashService());
     }
 
     @Test
@@ -78,11 +80,12 @@ class DeviceSessionServiceTest {
     @Test
     void confirmedTokenIsSingleUseAndActivatesPendingSession() {
         UserSession pending = new UserSession();
-        pending.setDeviceConfirmationToken("one-time-token");
+        pending.setDeviceConfirmationToken(new TransientTokenHashService().hash("one-time-token"));
         pending.setDeviceConfirmationExpiresAt(OffsetDateTime.now().plusMinutes(5));
         pending.setEmailConfirmed(false);
         pending.setSessionStatus(SessionStatus.EXPIRED);
-        when(repository.findFirstByDeviceConfirmationToken("one-time-token")).thenReturn(Optional.of(pending));
+        when(repository.findFirstByDeviceConfirmationToken(new TransientTokenHashService().hash("one-time-token")))
+                .thenReturn(Optional.of(pending));
 
         var response = service.confirmLogin("one-time-token");
 
@@ -97,10 +100,11 @@ class DeviceSessionServiceTest {
     @Test
     void expiredTokenCannotConfirmDevice() {
         UserSession pending = new UserSession();
-        pending.setDeviceConfirmationToken("expired-token");
+        pending.setDeviceConfirmationToken(new TransientTokenHashService().hash("expired-token"));
         pending.setDeviceConfirmationExpiresAt(OffsetDateTime.now().minusMinutes(1));
         pending.setEmailConfirmed(false);
-        when(repository.findFirstByDeviceConfirmationToken("expired-token")).thenReturn(Optional.of(pending));
+        when(repository.findFirstByDeviceConfirmationToken(new TransientTokenHashService().hash("expired-token")))
+                .thenReturn(Optional.of(pending));
 
         assertThrows(IllegalArgumentException.class, () -> service.confirmLogin("expired-token"));
         assertFalse(pending.getEmailConfirmed());
