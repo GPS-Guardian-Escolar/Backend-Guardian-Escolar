@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.trips.service.TripService;
 import com.guardianescolar.api.modules.trips.dto.TripDtos;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,8 +41,10 @@ public class TripController {
     @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
-    public List<TripDtos.TripResponse> list() {
-        return tripService.list();
+    public PageResponse<TripDtos.TripResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return tripService.listPage(page, Pagination.size(size));
     }
 
     @Operation(summary = "Crear recurso")
@@ -72,7 +77,10 @@ public class TripController {
     @Operation(summary = "Listar coordenadas del trayecto")
     @GetMapping("/{tripId}/coordinates")
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
-    public List<TripDtos.CoordinateResponse> listCoordinates(@PathVariable UUID tripId) {
-        return tripService.listCoordinates(tripId);
+    public PageResponse<TripDtos.CoordinateResponse> listCoordinates(
+            @PathVariable UUID tripId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return tripService.listCoordinatesPage(tripId, page, Pagination.size(size));
     }
 }

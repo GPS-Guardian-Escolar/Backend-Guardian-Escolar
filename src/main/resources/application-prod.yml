@@ -9,7 +9,8 @@ spring:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
+    path: /api/openapi.json
   swagger-ui:
     enabled: false
 
