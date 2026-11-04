@@ -25,6 +25,9 @@ guardian:
     require-https: ${REQUIRE_HTTPS:true}
   mail:
     enabled: ${APP_MAIL_ENABLED:false}
+  push:
+    expo:
+      enabled: ${EXPO_PUSH_ENABLED:true}
 
 logging:
   level:
