@@ -33,6 +33,9 @@ public class StudentRoute {
     @JoinColumn(name = "route_id")
     private Route route;
 
+    @Column(name = "is_preferred", nullable = false)
+    private Boolean isPreferred = false;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 

@@ -20,6 +20,8 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
     boolean existsByIdAndStudentUserEmailIgnoreCaseAndDeletedAtIsNull(UUID id, String email);
 
+    List<Trip> findByStatusAndDeletedAtIsNull(TripStatus status);
+
     long countByStatusAndDeletedAtIsNull(TripStatus status);
 
     boolean existsByStudentIdAndStatusAndDeletedAtIsNull(UUID studentId, TripStatus status);

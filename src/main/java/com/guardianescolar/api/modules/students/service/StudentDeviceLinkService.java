@@ -68,7 +68,8 @@ public class StudentDeviceLinkService {
                 contact == null ? "" : contact.getFullName(),
                 contact == null ? "" : contact.getPhone(),
                 contact == null ? "" : contact.getRelationship(),
-                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId));
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId),
+                studentMapper.preferredRouteId(studentId));
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +94,8 @@ public class StudentDeviceLinkService {
                 contact == null ? "" : contact.getFullName(),
                 contact == null ? "" : contact.getPhone(),
                 contact == null ? "" : contact.getRelationship(),
-                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()));
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()),
+                studentMapper.preferredRouteId(student.getId()));
     }
 
     private StudentDevice resolveLinkableDevice(Student student, String deviceIdentifier) {
@@ -128,6 +130,7 @@ public class StudentDeviceLinkService {
                 .findFirst()
                 .orElseGet(() -> contacts.stream().findFirst().orElse(null));
     }
+
 
     private Student findStudent(java.util.UUID studentId) {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)

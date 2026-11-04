@@ -4,6 +4,8 @@ public final class NotificationEventTypes {
 
     public static final String DELAY = "DELAY";
     public static final String INACTIVITY = "INACTIVITY";
+    public static final String LOCATION_UNAVAILABLE = "LOCATION_UNAVAILABLE";
+    public static final String LOCATION_STOPPED = "LOCATION_STOPPED";
     public static final String ROUTE_DEVIATION = "ROUTE_DEVIATION";
     public static final String SAFE_ZONE_ENTRY = "SAFE_ZONE_ENTRY";
     public static final String SAFE_ZONE_EXIT = "SAFE_ZONE_EXIT";

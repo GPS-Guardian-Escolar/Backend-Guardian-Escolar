@@ -128,6 +128,14 @@ public class NotificationService {
         }
     }
 
+    @Transactional
+    public void createForUserOnceSince(Trip trip, User user, String eventType, String message, OffsetDateTime since) {
+        lockInactivityDeduplication(trip.getId(), eventType, user.getId());
+        if (!notificationRepository.existsRecentNotificationForUser(trip.getId(), eventType, since, user.getId())) {
+            createForUser(trip, user, eventType, message);
+        }
+    }
+
     private void lockInactivityDeduplication(UUID tripId, String eventType, UUID userId) {
         entityManager.createNativeQuery(
                         "SELECT pg_advisory_xact_lock(hashtextextended(:deduplicationKey, 0))")

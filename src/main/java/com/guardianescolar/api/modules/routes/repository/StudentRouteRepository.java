@@ -11,4 +11,6 @@ public interface StudentRouteRepository extends JpaRepository<StudentRoute, Stud
     boolean existsByIdStudentIdAndIdRouteIdAndIsActiveTrue(UUID studentId, UUID routeId);
 
     List<StudentRoute> findByIdStudentIdAndIsActiveTrue(UUID studentId);
+
+    java.util.Optional<StudentRoute> findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(UUID studentId);
 }

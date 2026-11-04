@@ -124,6 +124,11 @@ public class TripAlertService {
         }
     }
 
+    public void notifyTrackingStopped(Trip trip) {
+        notifyRecipients(trip, null, NotificationEventTypes.LOCATION_STOPPED,
+                "El seguimiento de " + trip.getStudent().getFullName() + " se detuvo antes de completar el trayecto.");
+    }
+
     private void notifyRecipients(Trip trip, SafeZone safeZone, String eventType, String message) {
         Map<UUID, User> recipients = new LinkedHashMap<>();
         addRecipient(recipients, trip.getStudent().getUser());

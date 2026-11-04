@@ -82,6 +82,13 @@ public class StudentController {
         studentService.assignRoute(studentId, routeId);
     }
 
+    @PutMapping("/{studentId}/preferred-route/{routeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
+    public void setPreferredRoute(@PathVariable UUID studentId, @PathVariable UUID routeId) {
+        studentService.setPreferredRoute(studentId, routeId);
+    }
+
     @Operation(summary = "Desvincular dispositivo")
     @DeleteMapping("/{studentId}/device")
     @ResponseStatus(HttpStatus.NO_CONTENT)

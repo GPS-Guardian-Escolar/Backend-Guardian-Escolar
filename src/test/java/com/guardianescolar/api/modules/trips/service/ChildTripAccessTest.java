@@ -35,9 +35,10 @@ class ChildTripAccessTest {
     private final StudentDeviceRepository devices = mock(StudentDeviceRepository.class);
     private final TripRepository trips = mock(TripRepository.class);
     private final CurrentUserService current = mock(CurrentUserService.class);
+    private final StudentAccessService access = mock(StudentAccessService.class);
     private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class),
             mock(StudentRouteRepository.class), mock(StudentService.class), mock(StudentRepository.class),
-            mock(StudentAccessService.class), mock(RouteService.class), current,
+            access, mock(RouteService.class), current,
             mock(NotificationService.class), mock(TripAlertService.class), mock(TripMapper.class),
             mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
     private Student student;
@@ -112,5 +113,32 @@ class ChildTripAccessTest {
         assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
                 new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
         verify(trips, never()).save(any());
+    }
+
+    @Test
+    void sharedViewerCannotStopTripOrUploadCoordinates() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("viewer", null, List.of()));
+        doThrow(new AccessDeniedException("Read only")).when(access).validateManagement(student);
+        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
+                new TripDtos.ChangeStatusRequest(TripStatus.CANCELED, null)));
+        assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void linkedDeviceCannotUploadToCompletedTrip() {
+        trip.setStatus(TripStatus.COMPLETED);
+        assertThrows(IllegalArgumentException.class, () -> service.registerCoordinate(trip.getId(), null));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void ownerCanFinishTripAfterManagementCheck() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("owner", null, List.of()));
+        service.changeStatus(trip.getId(), new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null));
+        verify(access).validateManagement(student);
+        verify(trips).save(trip);
     }
 }
