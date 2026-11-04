@@ -180,8 +180,10 @@ public class StudentService {
                 .filter(item -> item.getRoute().getId().equals(routeId) && item.getRoute().getDeletedAt() == null)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("The selected route is not assigned to this student"));
-        assignments.forEach(item -> item.setIsPreferred(item.getId().equals(selected.getId())));
-        studentRouteRepository.saveAll(assignments);
+        studentRouteRepository.clearPreferredRoute(studentId);
+        if (studentRouteRepository.markPreferredRoute(studentId, routeId) != 1) {
+            throw new IllegalStateException("The selected route assignment changed while it was being saved");
+        }
     }
 
     @Transactional
