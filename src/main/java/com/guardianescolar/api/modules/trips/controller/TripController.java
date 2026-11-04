@@ -16,6 +16,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -70,6 +71,13 @@ public class TripController {
             @PathVariable UUID tripId,
             @Valid @RequestBody TripDtos.ChangeStatusRequest request) {
         return tripService.changeStatus(tripId, request);
+    }
+
+    @DeleteMapping("/{tripId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    public void delete(@PathVariable UUID tripId) {
+        tripService.delete(tripId);
     }
 
     @Operation(summary = "Registrar coordenada del trayecto")

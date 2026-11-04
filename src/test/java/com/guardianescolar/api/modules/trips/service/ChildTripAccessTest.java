@@ -173,4 +173,18 @@ class ChildTripAccessTest {
         verify(access).validateManagement(student);
         verify(trips).save(trip);
     }
+
+    @Test
+    void ownerCanCancelAndRemoveAnActiveTripFromHistory() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("owner", null, List.of()));
+
+        service.delete(trip.getId());
+
+        assertEquals(TripStatus.CANCELED, trip.getStatus());
+        assertNotNull(trip.getTripEndedAt());
+        assertNotNull(trip.getDeletedAt());
+        verify(access).validateManagement(student);
+        verify(trips).save(trip);
+    }
 }

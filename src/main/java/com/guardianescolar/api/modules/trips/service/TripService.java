@@ -153,6 +153,18 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
+    @Transactional
+    public void delete(UUID tripId) {
+        Trip trip = getAllowed(tripId);
+        studentAccessService.validateManagement(trip.getStudent());
+        if (trip.getStatus() == TripStatus.IN_PROGRESS) {
+            trip.setStatus(TripStatus.CANCELED);
+            trip.setTripEndedAt(OffsetDateTime.now());
+        }
+        trip.setDeletedAt(OffsetDateTime.now());
+        tripRepository.save(trip);
+    }
+
     private boolean isAllowedTransition(TripStatus current, TripStatus requested) {
         if (current == requested) {
             return true;
