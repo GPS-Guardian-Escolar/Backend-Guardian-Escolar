@@ -18,6 +18,8 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
     Optional<Trip> findByIdAndDeletedAtIsNull(UUID id);
 
+    Optional<Trip> findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(UUID studentId, TripStatus status);
+
     boolean existsByIdAndStudentUserEmailIgnoreCaseAndDeletedAtIsNull(UUID id, String email);
 
     List<Trip> findByStatusAndDeletedAtIsNull(TripStatus status);

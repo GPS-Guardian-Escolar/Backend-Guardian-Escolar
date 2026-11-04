@@ -116,6 +116,14 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<TripDtos.TripResponse> activeForStudent(UUID studentId) {
+        validateChildStudent(studentId);
+        studentService.getAllowed(studentId);
+        return tripRepository.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                studentId, TripStatus.IN_PROGRESS).map(tripMapper::toResponse);
+    }
+
     @Transactional
     public TripDtos.TripResponse changeStatus(UUID tripId, TripDtos.ChangeStatusRequest request) {
         Trip trip = getAllowed(tripId);

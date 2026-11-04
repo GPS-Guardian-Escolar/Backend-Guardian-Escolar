@@ -127,7 +127,9 @@ public class MapsService {
                     result.path("place_id").asText(null),
                     decimal(location.path("lat")),
                     decimal(location.path("lng")),
-                    strings(result.path("types"))));
+                    strings(result.path("types")),
+                    result.path("geometry").path("location_type").asText(null),
+                    result.path("partial_match").asBoolean(false)));
         });
         return new GeocodeResponse(payload.path("status").asText(), cached, results);
     }

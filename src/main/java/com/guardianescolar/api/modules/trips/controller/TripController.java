@@ -38,6 +38,14 @@ public class TripController {
 
     private final TripService tripService;
 
+    @GetMapping("/active")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
+    public org.springframework.http.ResponseEntity<TripDtos.TripResponse> active(@RequestParam UUID studentId) {
+        return tripService.activeForStudent(studentId)
+                .map(org.springframework.http.ResponseEntity::ok)
+                .orElseGet(() -> org.springframework.http.ResponseEntity.noContent().build());
+    }
+
     @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
