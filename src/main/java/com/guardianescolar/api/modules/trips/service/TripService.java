@@ -125,30 +125,6 @@ public class TripService {
     }
 
     @Transactional
-    public TripDtos.TripResponse changeStatus(UUID tripId, TripDtos.ChangeStatusRequest request) {
-        Trip trip = getAllowed(tripId);
-        validateTripMutation(trip.getStudent());
-        if (!isAllowedTransition(trip.getStatus(), request.status())) {
-            throw new IllegalArgumentException("Invalid trip status transition");
-        }
-        if (SecurityContextHolder.getContext().getAuthentication().getDetails()
-                instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails) {
-            throw new AccessDeniedException("Only the guardian may change a trip status");
-        }
-        boolean trackingStopped = trip.getStatus() == TripStatus.IN_PROGRESS && request.status() == TripStatus.CANCELED;
-        trip.setStatus(request.status());
-        if (request.hadDeviation() != null) {
-            trip.setHadDeviation(request.hadDeviation());
-        }
-        if (request.status() == TripStatus.COMPLETED || request.status() == TripStatus.CANCELED) {
-            trip.setTripEndedAt(OffsetDateTime.now());
-        }
-        Trip saved = tripRepository.save(trip);
-        if (trackingStopped) tripAlertService.notifyTrackingStopped(saved);
-        return tripMapper.toResponse(saved);
-    }
-
-    @Transactional
     public void delete(UUID tripId) {
         Trip trip = getAllowed(tripId);
         studentAccessService.validateManagement(trip.getStudent());
@@ -158,15 +134,6 @@ public class TripService {
         }
         trip.setDeletedAt(OffsetDateTime.now());
         tripRepository.save(trip);
-    }
-
-    private boolean isAllowedTransition(TripStatus current, TripStatus requested) {
-        if (current == requested) {
-            return true;
-        }
-        return (current == TripStatus.PENDING && requested == TripStatus.IN_PROGRESS)
-                || (current == TripStatus.IN_PROGRESS
-                        && (requested == TripStatus.COMPLETED || requested == TripStatus.CANCELED));
     }
 
     @Transactional
