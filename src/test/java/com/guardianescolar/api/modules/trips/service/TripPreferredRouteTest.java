@@ -50,7 +50,6 @@ class TripPreferredRouteTest {
         Student student = new Student(); student.setId(UUID.randomUUID()); student.setFullName("Test Student"); student.setUser(owner);
         when(current.currentUser()).thenReturn(owner);
         when(students.getAllowed(student.getId())).thenReturn(student);
-        when(trips.existsByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), TripStatus.IN_PROGRESS)).thenReturn(false);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("owner", null, List.of()));
         return student;
     }
@@ -59,7 +58,7 @@ class TripPreferredRouteTest {
     }
     private Route route() { Route route = new Route(); route.setId(UUID.randomUUID()); route.setRouteName("Route"); return route; }
 
-    @Test void startsNextTripOnGuardianPreferredRoute() {
+    @Test void createsPendingMonitoringOnGuardianPreferredRouteUntilMovementIsConfirmed() {
         Student student = student(); Route route = route();
         StudentRoute preferred = assignment(student, route, true);
         when(assignments.findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(student.getId())).thenReturn(Optional.of(preferred));
@@ -68,6 +67,8 @@ class TripPreferredRouteTest {
         when(trips.save(any(Trip.class))).thenAnswer(invocation -> invocation.getArgument(0));
         TripDtos.TripResponse response = service.create(new TripDtos.TripRequest(student.getId(), null, null));
         assertEquals(route.getId(), response.routeId());
+        assertEquals(TripStatus.PENDING, response.status());
+        verifyNoInteractions(notifications);
         verify(routes).getAllowed(route.getId());
     }
 
