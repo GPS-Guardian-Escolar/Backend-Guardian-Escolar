@@ -148,6 +148,18 @@ public class TripAlertService {
                 "El seguimiento de " + trip.getStudent().getFullName() + " se detuvo antes de completar el trayecto.");
     }
 
+    public void notifyTripStarted(Trip trip) {
+        if (trip == null) return;
+        notifyRecipients(trip, null, NotificationEventTypes.TRIP_STARTED,
+                "Se inició el trayecto de " + trip.getStudent().getFullName());
+    }
+
+    public void notifyTripFinished(Trip trip) {
+        if (trip == null) return;
+        notifyRecipients(trip, null, NotificationEventTypes.TRIP_FINISHED,
+                "Finalizó el trayecto de " + trip.getStudent().getFullName());
+    }
+
     private void notifyRecipients(Trip trip, SafeZone safeZone, String eventType, String message) {
         Map<UUID, User> recipients = new LinkedHashMap<>();
         addRecipient(recipients, trip.getStudent().getUser());

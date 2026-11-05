@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
-import com.guardianescolar.api.modules.notifications.service.NotificationService;
 import com.guardianescolar.api.modules.routes.domain.Route;
 import com.guardianescolar.api.modules.routes.domain.StudentRoute;
 import com.guardianescolar.api.modules.routes.domain.StudentRouteId;
@@ -37,11 +36,11 @@ class TripPreferredRouteTest {
     private final StudentService students = mock(StudentService.class);
     private final RouteService routes = mock(RouteService.class);
     private final CurrentUserService current = mock(CurrentUserService.class);
-    private final NotificationService notifications = mock(NotificationService.class);
+    private final TripAlertService alerts = mock(TripAlertService.class);
     private final TripMapper mapper = new TripMapper();
     private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class), assignments,
             students, mock(StudentRepository.class), mock(StudentAccessService.class), routes, current,
-            notifications, mock(TripAlertService.class), mapper, mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
+            alerts, mapper, mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
 
     @AfterEach void cleanup() { SecurityContextHolder.clearContext(); }
 
@@ -68,7 +67,7 @@ class TripPreferredRouteTest {
         TripDtos.TripResponse response = service.create(new TripDtos.TripRequest(student.getId(), null, null));
         assertEquals(route.getId(), response.routeId());
         assertEquals(TripStatus.PENDING, response.status());
-        verifyNoInteractions(notifications);
+        verifyNoInteractions(alerts);
         verify(routes).getAllowed(route.getId());
     }
 

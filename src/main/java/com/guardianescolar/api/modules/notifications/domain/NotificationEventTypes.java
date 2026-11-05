@@ -10,6 +10,7 @@ public final class NotificationEventTypes {
     public static final String SAFE_ZONE_ENTRY = "SAFE_ZONE_ENTRY";
     public static final String SAFE_ZONE_EXIT = "SAFE_ZONE_EXIT";
     public static final String TRIP_STARTED = "TRIP_STARTED";
+    public static final String TRIP_FINISHED = "TRIP_FINISHED";
     public static final String DEVICE_LINKED = "DEVICE_LINKED";
 
     private NotificationEventTypes() {

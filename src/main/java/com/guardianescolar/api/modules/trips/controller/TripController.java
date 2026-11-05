@@ -79,6 +79,13 @@ public class TripController {
         tripService.delete(tripId);
     }
 
+    @Operation(summary = "Finalizar trayecto desde la cuenta del acudiente")
+    @PatchMapping("/{tripId}/finish")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    public TripDtos.TripResponse finish(@PathVariable UUID tripId) {
+        return tripService.finish(tripId);
+    }
+
     @Operation(summary = "Registrar coordenada del trayecto")
     @PostMapping("/{tripId}/coordinates")
     @ResponseStatus(HttpStatus.CREATED)
