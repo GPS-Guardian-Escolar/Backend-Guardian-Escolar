@@ -52,7 +52,9 @@ public final class MapsDtos {
             String placeId,
             BigDecimal latitude,
             BigDecimal longitude,
-            List<String> types) {
+            List<String> types,
+            String locationType,
+            boolean partialMatch) {
     }
 
     public record DirectionsResponse(

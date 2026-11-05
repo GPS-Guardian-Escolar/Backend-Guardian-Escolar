@@ -40,6 +40,7 @@ public final class StudentDtos {
             Boolean isActive,
             Long linkedDevices,
             Long linkedGuardians,
+            java.util.UUID preferredRouteId,
             List<RouteDtos.RouteResponse> routes) {
     }
 
@@ -98,7 +99,8 @@ public final class StudentDtos {
             String contactName,
             String contactPhone,
             String contactRelationship,
-            Long linkedDevices) {
+            Long linkedDevices,
+            java.util.UUID preferredRouteId) {
     }
 }
 

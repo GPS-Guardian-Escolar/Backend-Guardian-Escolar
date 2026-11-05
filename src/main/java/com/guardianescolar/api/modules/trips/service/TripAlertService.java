@@ -43,6 +43,12 @@ public class TripAlertService {
 
     public void processCoordinate(Trip trip, Coordinate coordinate) {
         detectInactivity(trip, coordinate);
+        // A stationary heartbeat proves that the phone is still connected.
+        // It is not evidence of a route or safe-zone transition, because GPS
+        // drift while standing still can otherwise create false alerts.
+        if (coordinate.getStoppedSeconds() != null && coordinate.getStoppedSeconds() > 0) {
+            return;
+        }
         detectSafeZones(trip, coordinate);
         detectRouteDeviation(trip, coordinate);
     }
@@ -122,6 +128,11 @@ public class TripAlertService {
             notifyRecipients(trip, null, NotificationEventTypes.ROUTE_DEVIATION,
                     "Se detectó un posible desvío de ruta para " + trip.getStudent().getFullName());
         }
+    }
+
+    public void notifyTrackingStopped(Trip trip) {
+        notifyRecipients(trip, null, NotificationEventTypes.LOCATION_STOPPED,
+                "El seguimiento de " + trip.getStudent().getFullName() + " se detuvo antes de completar el trayecto.");
     }
 
     private void notifyRecipients(Trip trip, SafeZone safeZone, String eventType, String message) {
