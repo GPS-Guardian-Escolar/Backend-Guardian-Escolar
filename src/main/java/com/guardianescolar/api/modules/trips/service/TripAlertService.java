@@ -10,6 +10,7 @@ import com.guardianescolar.api.modules.students.domain.StudentGuardian;
 import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 import com.guardianescolar.api.modules.trips.domain.Coordinate;
 import com.guardianescolar.api.modules.trips.domain.Trip;
+import com.guardianescolar.api.modules.trips.domain.TripStatus;
 import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
 import com.guardianescolar.api.modules.trips.repository.TripRepository;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
