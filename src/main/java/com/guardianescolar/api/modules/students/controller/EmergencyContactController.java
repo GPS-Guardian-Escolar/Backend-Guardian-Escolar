@@ -1,9 +1,13 @@
 package com.guardianescolar.api.modules.students.controller;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
 
 import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.students.service.EmergencyContactService;
 import com.guardianescolar.api.modules.students.dto.EmergencyContactDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -22,16 +26,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/students/{studentId}/emergency-contacts")
 @RequiredArgsConstructor
+@Tag(name = "Emergency contacts", description = "Emergency contacts associated with students")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Solicitud inválida o parámetros no válidos"),
+    @ApiResponse(responseCode = "401", description = "Se requiere autenticación"),
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+})
 public class EmergencyContactController {
 
     private final EmergencyContactService emergencyContactService;
 
+    @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('STUDENT_READ') or hasRole('ADMIN')")
     public List<EmergencyContactDtos.EmergencyContactResponse> list(@PathVariable UUID studentId) {
         return emergencyContactService.list(studentId);
     }
 
+    @Operation(summary = "Crear recurso")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
@@ -41,6 +53,7 @@ public class EmergencyContactController {
         return emergencyContactService.create(studentId, request);
     }
 
+    @Operation(summary = "Actualizar recurso")
     @PutMapping("/{contactId}")
     @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
     public EmergencyContactDtos.EmergencyContactResponse update(
@@ -50,6 +63,7 @@ public class EmergencyContactController {
         return emergencyContactService.update(studentId, contactId, request);
     }
 
+    @Operation(summary = "Eliminar recurso")
     @DeleteMapping("/{contactId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")

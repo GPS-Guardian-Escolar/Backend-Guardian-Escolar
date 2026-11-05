@@ -42,6 +42,7 @@ public class StudentMapper {
                 student.getIsActive(),
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()),
                 1 + studentGuardianRepository.countByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), STATUS_ACTIVE),
+                preferredRouteId(student.getId()),
                 assignedRoutes(student.getId()));
     }
 
@@ -74,6 +75,11 @@ public class StudentMapper {
                 studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(
                         device.getStudent().getId()),
                 childToken);
+    }
+
+    public UUID preferredRouteId(UUID studentId) {
+        return studentRouteRepository.findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(studentId)
+                .map(item -> item.getRoute().getId()).orElse(null);
     }
 
     private List<RouteDtos.RouteResponse> assignedRoutes(UUID studentId) {

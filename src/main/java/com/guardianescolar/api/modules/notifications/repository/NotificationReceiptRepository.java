@@ -11,4 +11,6 @@ public interface NotificationReceiptRepository extends JpaRepository<Notificatio
     List<NotificationReceipt> findByUserEmailIgnoreCaseOrderByReceivedAtDesc(String email);
 
     Optional<NotificationReceipt> findByIdAndUserEmailIgnoreCase(UUID id, String email);
+
+    List<NotificationReceipt> findByUserEmailIgnoreCaseAndWasReadFalse(String email);
 }

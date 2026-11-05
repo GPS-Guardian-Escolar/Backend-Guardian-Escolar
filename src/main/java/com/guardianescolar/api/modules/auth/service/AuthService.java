@@ -6,11 +6,14 @@ import com.guardianescolar.api.modules.notifications.repository.NotificationSett
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final String TERMS_VERSION = "2026-08-20";
+    private static final int MAX_LOGIN_FAILURES_PER_ACCOUNT = 5;
+    private static final int MAX_LOGIN_FAILURES_PER_IP = 20;
+    private static final int MAX_RECOVERY_REQUESTS_PER_ACCOUNT = 5;
+    private static final int MAX_RECOVERY_REQUESTS_PER_IP = 20;
+    private static final Duration LOGIN_WINDOW = Duration.ofMinutes(15);
+    private static final Duration RECOVERY_WINDOW = Duration.ofHours(1);
 
     private final UserRepository userRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
@@ -33,6 +42,8 @@ public class AuthService {
     private final RoleProvisioningService roleProvisioningService;
     private final DeviceSessionService deviceSessionService;
     private final TwoFactorService twoFactorService;
+    private final AuthAttemptLimiter attemptLimiter;
+    private final TransientTokenHashService transientTokenHashService;
 
     @Transactional
     public AuthDtos.AuthResponse register(AuthDtos.RegisterRequest request) {
@@ -48,6 +59,9 @@ public class AuthService {
         if (!Boolean.TRUE.equals(request.termsAccepted())) {
             throw new IllegalArgumentException("Debe aceptar los términos y condiciones");
         }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
 
         User user = new User();
         user.setFullName(request.fullName().trim());
@@ -56,7 +70,8 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setIsActive(false);
         user.setEmailVerified(false);
-        user.setEmailVerificationToken(generateToken());
+        String verificationToken = generateToken();
+        user.setEmailVerificationToken(transientTokenHashService.hash(verificationToken));
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         user.setTermsAccepted(true);
         user.setTermsAcceptedAt(OffsetDateTime.now());
@@ -70,36 +85,49 @@ public class AuthService {
 
         emailService.enviarVerificacionEmail(
                 user.getEmail(),
-                user.getEmailVerificationToken(),
+                verificationToken,
                 validationService.normalizeReturnUrl(request.returnUrl()));
         return authResponse("", 0, userMapper.toUserResponse(user), false, null, null);
     }
 
-    @Transactional(noRollbackFor = IllegalArgumentException.class)
+    // Limiter operations use independent transactions. Do not hold a database
+    // connection while waiting for those transactions during concurrent logins.
     public AuthDtos.AuthResponse login(AuthDtos.LoginRequest request) {
         String email = validationService.normalizeEmail(request.email());
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas"));
-        validateLoginUser(user);
+        String ip = attemptLimiter.clientIp();
+        attemptLimiter.assertAllowed("login-account", email, MAX_LOGIN_FAILURES_PER_ACCOUNT, LOGIN_WINDOW);
+        attemptLimiter.assertAllowed("login-ip", ip, MAX_LOGIN_FAILURES_PER_IP, LOGIN_WINDOW);
 
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (user == null) {
+            recordLoginFailure(email, ip);
+            throw new IllegalArgumentException("Credenciales invalidas");
+        }
+        try {
+            validateLoginUser(user);
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        } catch (AuthenticationException | IllegalArgumentException exception) {
+            recordLoginFailure(email, ip);
+            throw exception;
+        }
+        attemptLimiter.clear("login-account", email);
+        attemptLimiter.clear("login-ip", ip);
 
         // The device must be approved before revealing or issuing a 2FA challenge.
         deviceSessionService.validateDeviceLogin(user, request);
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
-            return authResponse("", 0, userMapper.toUserResponse(user), true, user.getTwoFactorToken(), user.getTwoFactorMethod());
+            String twoFactorToken = twoFactorService.prepareAndSend(user, user.getTwoFactorMethod());
+            return authResponse("", 0, userMapper.toUserResponse(user), true, twoFactorToken, user.getTwoFactorMethod());
         }
 
         String token = jwtService.generateToken(user);
         deviceSessionService.saveSession(user, token, request);
         return authResponse(token, jwtService.getExpirationMinutes(), userMapper.toUserResponse(user), false, null, null);
     }
-
     @Transactional
     public AuthDtos.MessageResponse verificarEmail(String token) {
-        User user = userRepository.findByEmailVerificationToken(token)
+        User user = userRepository.findByEmailVerificationToken(transientTokenHashService.hash(token))
                 .orElseThrow(() -> new IllegalArgumentException("Token de verificación inválido"));
         validateEmailVerificationToken(user);
 
@@ -118,28 +146,50 @@ public class AuthService {
 
     @Transactional
     public AuthDtos.MessageResponse solicitarRestablecimiento(AuthDtos.PasswordRecoveryRequest request) {
-        userRepository.findByEmailIgnoreCase(validationService.normalizeEmail(request.email()))
+        String email = validationService.normalizeEmail(request.email());
+        String ip = attemptLimiter.clientIp();
+        int accountRequests = attemptLimiter.record(
+                "recovery-account", email, MAX_RECOVERY_REQUESTS_PER_ACCOUNT, RECOVERY_WINDOW);
+        int ipRequests = attemptLimiter.record(
+                "recovery-ip", ip, MAX_RECOVERY_REQUESTS_PER_IP, RECOVERY_WINDOW);
+        if (accountRequests > MAX_RECOVERY_REQUESTS_PER_ACCOUNT || ipRequests > MAX_RECOVERY_REQUESTS_PER_IP) {
+            return new AuthDtos.MessageResponse(
+                    "Si el email existe, recibira instrucciones para restablecer la contrasena");
+        }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
+        userRepository.findByEmailIgnoreCase(email)
                 .filter(User::getIsActive)
                 .ifPresent(user -> {
-                    user.setPasswordResetToken(generateToken());
+                    String resetToken = generateToken();
+                    user.setPasswordResetToken(transientTokenHashService.hash(resetToken));
                     user.setPasswordResetExpiresAt(OffsetDateTime.now().plusMinutes(30));
                     userRepository.save(user);
-                    emailService.enviarRestablecimientoPassword(user.getEmail(), user.getPasswordResetToken());
+                    emailService.enviarRestablecimientoPassword(user.getEmail(), resetToken);
                 });
-        return new AuthDtos.MessageResponse("Si el email existe, recibirá instrucciones para restablecer la contraseña");
+        return new AuthDtos.MessageResponse("Si el email existe, recibira instrucciones para restablecer la contrasena");
     }
 
+    private void recordLoginFailure(String email, String ip) {
+        attemptLimiter.record("login-account", email, MAX_LOGIN_FAILURES_PER_ACCOUNT, LOGIN_WINDOW);
+        attemptLimiter.record("login-ip", ip, MAX_LOGIN_FAILURES_PER_IP, LOGIN_WINDOW);
+    }
     @Transactional
     public AuthDtos.MessageResponse restablecerPassword(AuthDtos.ResetPasswordRequest request) {
         validationService.validatePasswordPolicy(request.newPassword());
-        User user = userRepository.findByPasswordResetToken(request.token())
+        User user = userRepository.findByPasswordResetToken(transientTokenHashService.hash(request.token()))
                 .orElseThrow(() -> new IllegalArgumentException("Token de restablecimiento inválido"));
         validatePasswordResetToken(user);
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseÃ±a debe ser diferente de la actual");
+        }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         user.setPasswordResetToken(null);
         user.setPasswordResetExpiresAt(null);
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
     }
 
@@ -147,7 +197,7 @@ public class AuthService {
     public AuthDtos.UserResponse actualizarPerfil(AuthDtos.UpdateProfileRequest request) {
         User user = currentUserService.currentUser();
         user.setFullName(request.fullName().trim());
-        user.setPhone(validationService.normalizeOptionalText(request.phone()));
+        user.setPhone(validationService.normalizePhone(request.phone()));
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
@@ -164,13 +214,18 @@ public class AuthService {
         if (!changedEmail) {
             return userMapper.toUserResponse(user);
         }
+        if (!emailService.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
 
         user.setEmail(newEmail);
         user.setEmailVerified(false);
-        user.setEmailVerificationToken(generateToken());
+        String verificationToken = generateToken();
+        user.setEmailVerificationToken(transientTokenHashService.hash(verificationToken));
         user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusHours(24));
         User saved = userRepository.save(user);
-        emailService.enviarVerificacionEmail(saved.getEmail(), saved.getEmailVerificationToken(), null);
+        deviceSessionService.revokeAllSessions(user);
+        emailService.enviarVerificacionEmail(saved.getEmail(), verificationToken, null);
         return userMapper.toUserResponse(saved);
     }
 
@@ -179,9 +234,21 @@ public class AuthService {
         validationService.validatePasswordPolicy(request.newPassword());
         User user = currentUserService.currentUser();
         validationService.validateCurrentPassword(user, request.currentPassword());
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente de la actual");
+        }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        deviceSessionService.revokeAllSessions(user);
         return new AuthDtos.MessageResponse("Contraseña actualizada correctamente");
+    }
+
+    @Transactional
+    public AuthDtos.MessageResponse logout(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            deviceSessionService.closeSession(authorizationHeader.substring(7).trim());
+        }
+        return new AuthDtos.MessageResponse("Sesión cerrada correctamente");
     }
 
     @Transactional

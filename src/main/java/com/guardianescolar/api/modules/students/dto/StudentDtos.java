@@ -3,6 +3,7 @@ package com.guardianescolar.api.modules.students.dto;
 import com.guardianescolar.api.modules.students.domain.SchoolGrade;
 import com.guardianescolar.api.modules.routes.dto.RouteDtos;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -20,10 +21,11 @@ public final class StudentDtos {
 
     public record StudentRequest(
             UUID userId,
-            @NotBlank @Size(min = 2, max = 100) String fullName,
+            @NotBlank @Size(min = 3, max = 60) @Pattern(regexp = "^(?!.*(.)\\1{2})[\\p{L}\\p{M}]+(?:[ '\\u2019-][\\p{L}\\p{M}]+)*$", message = "El nombre solo puede contener letras y no repetir caracteres de forma excesiva") String fullName,
             @NotNull SchoolGrade schoolGrade,
             @NotNull @Past LocalDate birthDate,
-            @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData) {
+            @Size(max = 1500000, message = "La imagen del estudiante es demasiado grande") String photoData,
+            @NotNull @Valid EmergencyContactDtos.EmergencyContactRequest emergencyContact) {
     }
 
     public record StudentResponse(
@@ -38,6 +40,7 @@ public final class StudentDtos {
             Boolean isActive,
             Long linkedDevices,
             Long linkedGuardians,
+            java.util.UUID preferredRouteId,
             List<RouteDtos.RouteResponse> routes) {
     }
 
@@ -57,12 +60,22 @@ public final class StudentDtos {
             OffsetDateTime createdAt) {
     }
 
+    public record ShareStudentResponse(
+            LinkedGuardianResponse guardian,
+            boolean emailSent) {
+    }
+
     public record LinkDeviceRequest(
             UUID studentId,
-            @NotBlank @Size(min = 6, max = 20) String code,
+            @NotBlank @Size(min = 8, max = 32) String code,
             @NotBlank @Size(min = 8, max = 160) String deviceIdentifier,
             @NotBlank @Pattern(regexp = "ANDROID|IOS|WEB", message = "platform debe ser ANDROID, IOS o WEB") String platform,
             @Size(max = 120) String deviceName) {
+    }
+
+    public record LinkCodeResponse(
+            String code,
+            OffsetDateTime expiresAt) {
     }
 
     public record StudentDeviceResponse(
@@ -86,7 +99,8 @@ public final class StudentDtos {
             String contactName,
             String contactPhone,
             String contactRelationship,
-            Long linkedDevices) {
+            Long linkedDevices,
+            java.util.UUID preferredRouteId) {
     }
 }
 

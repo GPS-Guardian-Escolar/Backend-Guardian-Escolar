@@ -1,0 +1,148 @@
+package com.guardianescolar.api.modules.trips.service;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.guardianescolar.api.modules.auth.service.CurrentUserService;
+import com.guardianescolar.api.modules.notifications.service.NotificationService;
+import com.guardianescolar.api.modules.routes.repository.StudentRouteRepository;
+import com.guardianescolar.api.modules.routes.service.RouteService;
+import com.guardianescolar.api.modules.security.domain.User;
+import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.domain.StudentDevice;
+import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
+import com.guardianescolar.api.modules.students.repository.StudentRepository;
+import com.guardianescolar.api.modules.students.service.StudentAccessService;
+import com.guardianescolar.api.modules.students.service.StudentService;
+import com.guardianescolar.api.modules.trips.domain.Trip;
+import com.guardianescolar.api.modules.trips.domain.TripStatus;
+import com.guardianescolar.api.modules.trips.dto.TripDtos;
+import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
+import com.guardianescolar.api.modules.trips.repository.TripRepository;
+import com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+class ChildTripAccessTest {
+    private final StudentDeviceRepository devices = mock(StudentDeviceRepository.class);
+    private final TripRepository trips = mock(TripRepository.class);
+    private final CurrentUserService current = mock(CurrentUserService.class);
+    private final StudentAccessService access = mock(StudentAccessService.class);
+    private final StudentService students = mock(StudentService.class);
+    private final TripMapper mapper = mock(TripMapper.class);
+    private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class),
+            mock(StudentRouteRepository.class), students, mock(StudentRepository.class),
+            access, mock(RouteService.class), current,
+            mock(NotificationService.class), mock(TripAlertService.class), mapper,
+            mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
+    private Student student;
+    private StudentDevice device;
+    private Trip trip;
+
+    @BeforeEach
+    void setup() {
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        student = new Student();
+        student.setId(UUID.randomUUID());
+        student.setUser(owner);
+        device = new StudentDevice();
+        device.setStudent(student);
+        device.setIsActive(true);
+        trip = new Trip();
+        trip.setId(UUID.randomUUID());
+        trip.setStudent(student);
+        trip.setStatus(TripStatus.IN_PROGRESS);
+        when(trips.findByIdAndDeletedAtIsNull(trip.getId())).thenReturn(Optional.of(trip));
+        when(devices.findByDeviceIdentifier("phone-1")).thenReturn(Optional.of(device));
+        when(current.currentUser()).thenReturn(owner);
+        var authentication = new UsernamePasswordAuthenticationToken("owner", null, List.of());
+        authentication.setDetails(new ChildDeviceAuthenticationDetails(student.getId(), "phone-1"));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    @AfterEach
+    void cleanup() { SecurityContextHolder.clearContext(); }
+
+    @Test
+    void linkedDeviceRecoversActiveTripFromServer() {
+        var response = new TripDtos.TripResponse(trip.getId(), student.getId(), null,
+                null, null, null, null, TripStatus.IN_PROGRESS, false);
+        when(trips.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                student.getId(), TripStatus.IN_PROGRESS)).thenReturn(Optional.of(trip));
+        when(mapper.toResponse(trip)).thenReturn(response);
+        assertEquals(response, service.activeForStudent(student.getId()).orElseThrow());
+        verify(students).getAllowed(student.getId());
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void missingActiveTripReturnsEmpty() {
+        assertTrue(service.activeForStudent(student.getId()).isEmpty());
+    }
+
+    @Test
+    void revokedDeviceCannotRecoverActiveTrip() {
+        device.setIsActive(false);
+        assertThrows(AccessDeniedException.class, () -> service.activeForStudent(student.getId()));
+        verify(trips, never()).findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void deviceCannotRecoverAnotherStudentsTrip() {
+        assertThrows(AccessDeniedException.class, () -> service.activeForStudent(UUID.randomUUID()));
+        verify(trips, never()).findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void revokedDeviceCannotUpload() {
+        device.setIsActive(false);
+        assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void deviceCannotUseAnotherStudentsTrip() {
+        Student other = new Student();
+        other.setId(UUID.randomUUID());
+        trip.setStudent(other);
+    }
+
+    @Test
+    void sharedViewerCannotStopTripOrUploadCoordinates() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("viewer", null, List.of()));
+        doThrow(new AccessDeniedException("Read only")).when(access).validateManagement(student);
+        assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void linkedDeviceCannotUploadToCompletedTrip() {
+        trip.setStatus(TripStatus.COMPLETED);
+        assertThrows(IllegalArgumentException.class, () -> service.registerCoordinate(trip.getId(), null));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void ownerCanCancelAndRemoveAnActiveTripFromHistory() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("owner", null, List.of()));
+
+        service.delete(trip.getId());
+
+        assertEquals(TripStatus.CANCELED, trip.getStatus());
+        assertNotNull(trip.getTripEndedAt());
+        assertNotNull(trip.getDeletedAt());
+        verify(access).validateManagement(student);
+        verify(trips).save(trip);
+    }
+}
