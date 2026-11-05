@@ -165,7 +165,25 @@ public class StudentService {
         if (studentRouteRepository.existsByIdStudentIdAndIdRouteIdAndIsActiveTrue(studentId, routeId)) {
             throw new IllegalArgumentException("The student already has this route assigned");
         }
-        studentRouteRepository.save(new StudentRoute(student, route));
+        StudentRoute assignment = new StudentRoute(student, route);
+        if (studentRouteRepository.findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(studentId).isEmpty()) {
+            assignment.setIsPreferred(true);
+        }
+        studentRouteRepository.save(assignment);
+    }
+
+    @Transactional
+    public void setPreferredRoute(UUID studentId, UUID routeId) {
+        getManageable(studentId);
+        List<StudentRoute> assignments = studentRouteRepository.findByIdStudentIdAndIsActiveTrue(studentId);
+        StudentRoute selected = assignments.stream()
+                .filter(item -> item.getRoute().getId().equals(routeId) && item.getRoute().getDeletedAt() == null)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("The selected route is not assigned to this student"));
+        studentRouteRepository.clearPreferredRoute(studentId);
+        if (studentRouteRepository.markPreferredRoute(studentId, routeId) != 1) {
+            throw new IllegalStateException("The selected route assignment changed while it was being saved");
+        }
     }
 
     @Transactional

@@ -90,7 +90,8 @@ public class AuthService {
         return authResponse("", 0, userMapper.toUserResponse(user), false, null, null);
     }
 
-    @Transactional(noRollbackFor = IllegalArgumentException.class)
+    // Limiter operations use independent transactions. Do not hold a database
+    // connection while waiting for those transactions during concurrent logins.
     public AuthDtos.AuthResponse login(AuthDtos.LoginRequest request) {
         String email = validationService.normalizeEmail(request.email());
         String ip = attemptLimiter.clientIp();

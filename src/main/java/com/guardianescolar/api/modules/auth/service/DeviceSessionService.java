@@ -14,6 +14,7 @@ import java.util.HexFormat;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class DeviceSessionService {
     private final AuthValidationService validationService;
     private final TransientTokenHashService transientTokenHashService;
 
+    @Transactional(noRollbackFor = DeviceConfirmationRequiredException.class)
     public void validateDeviceLogin(User user, AuthDtos.LoginRequest request) {
         String deviceIdentifier = validationService.normalizeOptionalText(request.deviceIdentifier());
         if (deviceIdentifier == null) {
@@ -60,6 +62,7 @@ public class DeviceSessionService {
                 "Este email ya está en uso en otro dispositivo. Revisa tu email para confirmar este nuevo inicio de sesión.");
     }
 
+    @Transactional
     public void saveSession(User user, String token, AuthDtos.LoginRequest request) {
         UserSession session = new UserSession();
         session.setUser(user);

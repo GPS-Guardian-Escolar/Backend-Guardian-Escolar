@@ -50,6 +50,23 @@ public class StudentLinkCodeService {
         validate(student, code);
     }
 
+    /**
+     * Makes a completed link request safe to retry from the same phone when
+     * the browser lost the response after the one-time code was consumed.
+     */
+    @Transactional(readOnly = true)
+    public void verifyConsumedForSameDevice(Student student, String rawCode) {
+        String code = rawCode == null ? "" : rawCode.trim().toUpperCase();
+        OffsetDateTime now = OffsetDateTime.now();
+        if (student.getLinkCodeUsedAt() == null
+                || student.getLinkCodeHash() == null
+                || student.getLinkCodeExpiresAt() == null
+                || !student.getLinkCodeExpiresAt().isAfter(now)
+                || !passwordEncoder.matches(code, student.getLinkCodeHash())) {
+            throw new IllegalArgumentException("Invalid or expired link code");
+        }
+    }
+
     @Transactional(readOnly = true)
     public Student resolveStudent(String rawCode) {
         String code = rawCode == null ? "" : rawCode.trim().toUpperCase();

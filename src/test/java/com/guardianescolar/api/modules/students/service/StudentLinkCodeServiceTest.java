@@ -2,6 +2,9 @@ package com.guardianescolar.api.modules.students.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -13,8 +16,33 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 class StudentLinkCodeServiceTest {
+
+    @Test
+    void issuedCodeCanBeVerifiedConsumedAndCannotBeReused() {
+        PasswordEncoder encoder = new BCryptPasswordEncoder(4);
+        StudentLinkCodeService realEncoderService = new StudentLinkCodeService(encoder, repository);
+        StudentLinkCodeService.IssuedCode issued = realEncoderService.issue(student);
+        assertEquals(16, issued.value().length());
+        assertTrue(issued.expiresAt().isAfter(OffsetDateTime.now()));
+        assertTrue(encoder.matches(issued.value(), student.getLinkCodeHash()));
+        assertNotEquals(issued.value(), student.getLinkCodeHash());
+        verify(repository).save(student);
+        realEncoderService.verify(student, issued.value());
+        realEncoderService.consume(student, issued.value());
+        assertThrows(IllegalArgumentException.class, () -> realEncoderService.verify(student, issued.value()));
+    }
+
+    @Test
+    void replacingCodeInvalidatesPreviousCode() {
+        StudentLinkCodeService realEncoderService = new StudentLinkCodeService(new BCryptPasswordEncoder(4), repository);
+        var previous = realEncoderService.issue(student);
+        var replacement = realEncoderService.issue(student);
+        assertThrows(IllegalArgumentException.class, () -> realEncoderService.verify(student, previous.value()));
+        realEncoderService.verify(student, replacement.value());
+    }
 
     private final StudentRepository repository = mock(StudentRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);

@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class TwoFactorService {
     private final AuthAttemptLimiter attemptLimiter;
     private final TransientTokenHashService transientTokenHashService;
 
+    @Transactional
     public String prepareAndSend(User user, String method) {
         String rawToken = prepareCode(user, method);
         userRepository.save(user);
