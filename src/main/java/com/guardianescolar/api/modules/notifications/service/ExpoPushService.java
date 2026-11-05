@@ -92,7 +92,9 @@ public class ExpoPushService {
             case NotificationEventTypes.ROUTE_DEVIATION -> "Route deviation alert";
             case NotificationEventTypes.SAFE_ZONE_ENTRY -> "Safe zone arrival";
             case NotificationEventTypes.SAFE_ZONE_EXIT -> "Safe zone departure";
-            case NotificationEventTypes.TRIP_STARTED -> "Trip started";
+            case NotificationEventTypes.TRIP_STARTED -> "Trayecto iniciado";
+            case NotificationEventTypes.TRIP_FINISHED -> "Trayecto finalizado";
+            case NotificationEventTypes.DEVICE_LINKED -> "Celular vinculado";
             default -> "Guardian Escolar";
         };
     }

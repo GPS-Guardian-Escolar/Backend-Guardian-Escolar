@@ -33,7 +33,7 @@ class LocationAvailabilityServiceTest {
     LocationAvailabilityService service;
 
     @BeforeEach void setUp() {
-        service = new LocationAvailabilityService(trips, coordinates, guardians, notifications);
+        service = new LocationAvailabilityService(trips, coordinates, guardians, notifications, new GeoMathService());
         ReflectionTestUtils.setField(service, "staleSeconds", 120L);
     }
 
@@ -42,11 +42,14 @@ class LocationAvailabilityServiceTest {
         User guardian = user();
         Student student = new Student(); student.setId(UUID.randomUUID()); student.setFullName("Sara"); student.setUser(owner);
         Trip trip = new Trip(); trip.setId(UUID.randomUUID()); trip.setStudent(student); trip.setTripStartedAt(OffsetDateTime.now().minusMinutes(10));
+        trip.setStatus(TripStatus.IN_PROGRESS);
         StudentGuardian shared = new StudentGuardian(); shared.setUser(guardian);
         StudentGuardian duplicate = new StudentGuardian(); duplicate.setUser(owner);
-        Coordinate last = new Coordinate(); last.setRecordedAt(OffsetDateTime.now().minusMinutes(3));
+        Coordinate origin = coordinate(0.0, 0.0, OffsetDateTime.now().minusMinutes(10));
+        Coordinate last = coordinate(0.001, 0.0, OffsetDateTime.now().minusMinutes(3));
         when(trips.findByStatusAndDeletedAtIsNull(TripStatus.IN_PROGRESS)).thenReturn(List.of(trip));
         when(coordinates.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())).thenReturn(List.of(last));
+        when(coordinates.findFirstByTripIdOrderByRecordedAtAsc(trip.getId())).thenReturn(origin);
         when(guardians.findByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), "ACTIVE")).thenReturn(List.of(shared, duplicate));
 
         service.checkActiveTrips();
@@ -58,23 +61,41 @@ class LocationAvailabilityServiceTest {
 
     @Test void recentLocationDoesNotSendAnAlert() {
         Trip trip = new Trip(); trip.setId(UUID.randomUUID()); trip.setTripStartedAt(OffsetDateTime.now().minusMinutes(5));
-        Coordinate last = new Coordinate(); last.setRecordedAt(OffsetDateTime.now().minusSeconds(30));
+        trip.setStatus(TripStatus.IN_PROGRESS);
+        Coordinate origin = coordinate(0.0, 0.0, OffsetDateTime.now().minusMinutes(5));
+        Coordinate last = coordinate(0.001, 0.0, OffsetDateTime.now().minusSeconds(30));
         when(trips.findByStatusAndDeletedAtIsNull(TripStatus.IN_PROGRESS)).thenReturn(List.of(trip));
         when(coordinates.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())).thenReturn(List.of(last));
+        when(coordinates.findFirstByTripIdOrderByRecordedAtAsc(trip.getId())).thenReturn(origin);
         service.checkActiveTrips();
         verifyNoInteractions(notifications, guardians);
     }
 
-    @Test void tripWithoutAnyLocationUsesTripStartForTimeout() {
-        User owner = user();
-        Student student = new Student(); student.setId(UUID.randomUUID()); student.setFullName("Sara"); student.setUser(owner);
-        Trip trip = new Trip(); trip.setId(UUID.randomUUID()); trip.setStudent(student); trip.setTripStartedAt(OffsetDateTime.now().minusMinutes(3));
+    @Test void activeTripWithoutMovementDoesNotAlertWhenNoCoordinatesExist() {
+        Trip trip = new Trip(); trip.setId(UUID.randomUUID()); trip.setTripStartedAt(OffsetDateTime.now().minusMinutes(3));
+        trip.setStatus(TripStatus.IN_PROGRESS);
         when(trips.findByStatusAndDeletedAtIsNull(TripStatus.IN_PROGRESS)).thenReturn(List.of(trip));
         when(coordinates.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())).thenReturn(List.of());
-        when(guardians.findByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), "ACTIVE")).thenReturn(List.of());
         service.checkActiveTrips();
-        verify(notifications).createForUserOnceSince(eq(trip), eq(owner), eq(NotificationEventTypes.LOCATION_UNAVAILABLE), anyString(), eq(trip.getTripStartedAt()));
+        verifyNoInteractions(notifications, guardians);
+    }
+
+    @Test void pendingTripDoesNotNotifyWhenThePhoneHasNotStartedMoving() {
+        Trip pending = new Trip(); pending.setId(UUID.randomUUID()); pending.setTripStartedAt(OffsetDateTime.now().minusHours(2));
+        when(trips.findByStatusAndDeletedAtIsNull(TripStatus.IN_PROGRESS)).thenReturn(List.of(pending));
+
+        service.checkActiveTrips();
+
+        verifyNoInteractions(coordinates, guardians, notifications);
     }
 
     private User user() { User user = new User(); user.setId(UUID.randomUUID()); return user; }
+
+    private Coordinate coordinate(double latitude, double longitude, OffsetDateTime recordedAt) {
+        Coordinate coordinate = new Coordinate();
+        coordinate.setLatitude(java.math.BigDecimal.valueOf(latitude));
+        coordinate.setLongitude(java.math.BigDecimal.valueOf(longitude));
+        coordinate.setRecordedAt(recordedAt);
+        return coordinate;
+    }
 }

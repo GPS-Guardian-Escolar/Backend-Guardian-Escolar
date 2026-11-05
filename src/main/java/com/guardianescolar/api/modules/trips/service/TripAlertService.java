@@ -10,6 +10,7 @@ import com.guardianescolar.api.modules.students.domain.StudentGuardian;
 import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 import com.guardianescolar.api.modules.trips.domain.Coordinate;
 import com.guardianescolar.api.modules.trips.domain.Trip;
+import com.guardianescolar.api.modules.trips.domain.TripStatus;
 import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
 import com.guardianescolar.api.modules.trips.repository.TripRepository;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 public class TripAlertService {
 
     private static final int DEFAULT_INACTIVITY_THRESHOLD_SECONDS = 300;
+    private static final double MOVEMENT_START_THRESHOLD_METERS = 40.0;
 
     private final CoordinateRepository coordinateRepository;
     private final TripRepository tripRepository;
@@ -42,14 +44,20 @@ public class TripAlertService {
     private double routeDeviationThresholdMeters;
 
     public void processCoordinate(Trip trip, Coordinate coordinate) {
+        if (trip == null || trip.getStatus() != TripStatus.IN_PROGRESS
+                || !hasConfirmedMovement(trip, coordinate)) {
+            return;
+        }
         detectInactivity(trip, coordinate);
+        // A second fix at the destination confirms arrival even if the child
+        // has stopped walking. Zone transitions already require two fixes.
+        detectSafeZones(trip, coordinate);
         // A stationary heartbeat proves that the phone is still connected.
-        // It is not evidence of a route or safe-zone transition, because GPS
+        // It is not evidence of a route deviation, because GPS
         // drift while standing still can otherwise create false alerts.
         if (coordinate.getStoppedSeconds() != null && coordinate.getStoppedSeconds() > 0) {
             return;
         }
-        detectSafeZones(trip, coordinate);
         detectRouteDeviation(trip, coordinate);
     }
 
@@ -131,8 +139,25 @@ public class TripAlertService {
     }
 
     public void notifyTrackingStopped(Trip trip) {
+        if (trip == null || trip.getStatus() != TripStatus.IN_PROGRESS
+                || !hasConfirmedMovement(trip, coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())
+                        .stream().findFirst().orElse(null))) {
+            return;
+        }
         notifyRecipients(trip, null, NotificationEventTypes.LOCATION_STOPPED,
                 "El seguimiento de " + trip.getStudent().getFullName() + " se detuvo antes de completar el trayecto.");
+    }
+
+    public void notifyTripStarted(Trip trip) {
+        if (trip == null) return;
+        notifyRecipients(trip, null, NotificationEventTypes.TRIP_STARTED,
+                "Se inició el trayecto de " + trip.getStudent().getFullName());
+    }
+
+    public void notifyTripFinished(Trip trip) {
+        if (trip == null) return;
+        notifyRecipients(trip, null, NotificationEventTypes.TRIP_FINISHED,
+                "Finalizó el trayecto de " + trip.getStudent().getFullName());
     }
 
     private void notifyRecipients(Trip trip, SafeZone safeZone, String eventType, String message) {
@@ -150,6 +175,15 @@ public class TripAlertService {
             recipients.putIfAbsent(user.getId(), user);
         }
     }
+
+    private boolean hasConfirmedMovement(Trip trip, Coordinate current) {
+        if (current == null) return false;
+        Coordinate origin = coordinateRepository.findFirstByTripIdOrderByRecordedAtAsc(trip.getId());
+        return origin != null && geoMathService.distanceMeters(
+                origin.getLatitude(), origin.getLongitude(), current.getLatitude(), current.getLongitude())
+                >= MOVEMENT_START_THRESHOLD_METERS;
+    }
+
     private boolean isInsideZone(Coordinate coordinate, SafeZone zone) {
         return geoMathService.isInsideRadius(
                 coordinate.getLatitude(),
