@@ -1,12 +1,10 @@
 package com.guardianescolar.api.modules.trips.service;
 
 import com.guardianescolar.api.modules.auth.service.CurrentUserService;
-import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.students.domain.Student;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
 import com.guardianescolar.api.modules.students.service.StudentAccessService;
 import com.guardianescolar.api.modules.students.service.StudentService;
-import com.guardianescolar.api.modules.notifications.service.NotificationService;
 import com.guardianescolar.api.modules.routes.domain.Route;
 import com.guardianescolar.api.modules.routes.repository.StudentRouteRepository;
 import com.guardianescolar.api.modules.routes.service.RouteService;
@@ -47,7 +45,6 @@ public class TripService {
     private final StudentAccessService studentAccessService;
     private final RouteService routeService;
     private final CurrentUserService currentUserService;
-    private final NotificationService notificationService;
     private final TripAlertService tripAlertService;
     private final TripMapper tripMapper;
     private final GeoMathService geoMathService;
@@ -147,6 +144,23 @@ public class TripService {
     }
 
     @Transactional
+    public TripDtos.TripResponse finish(UUID tripId) {
+        Trip trip = getAllowed(tripId);
+        studentAccessService.validateManagement(trip.getStudent());
+        TripStatus previousStatus = trip.getStatus();
+        if (previousStatus != TripStatus.IN_PROGRESS && previousStatus != TripStatus.PENDING) {
+            return tripMapper.toResponse(trip);
+        }
+        trip.setStatus(TripStatus.COMPLETED);
+        trip.setTripEndedAt(OffsetDateTime.now());
+        Trip saved = tripRepository.save(trip);
+        if (previousStatus == TripStatus.IN_PROGRESS) {
+            tripAlertService.notifyTripFinished(saved);
+        }
+        return tripMapper.toResponse(saved);
+    }
+
+    @Transactional
     public TripDtos.CoordinateResponse registerCoordinate(UUID tripId, TripDtos.CoordinateRequest request) {
         Trip trip = getAllowed(tripId);
         validateTripMutation(trip.getStudent());
@@ -187,9 +201,7 @@ public class TripService {
             trip.setStatus(TripStatus.IN_PROGRESS);
             trip.setTripStartedAt(saved.getRecordedAt());
             tripRepository.save(trip);
-            notificationService.createForUser(trip, trip.getStudent().getUser(),
-                    NotificationEventTypes.TRIP_STARTED,
-                    "Se iniciÃ³ el trayecto de " + trip.getStudent().getFullName());
+            tripAlertService.notifyTripStarted(trip);
         } else if (trip.getStatus() == TripStatus.PENDING && origin != null && previous != null
                 && !origin.getId().equals(previous.getId())) {
             // Keep a fixed departure anchor and one fresh point while waiting,
