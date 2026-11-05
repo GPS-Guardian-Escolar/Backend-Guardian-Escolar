@@ -41,7 +41,7 @@ class ChildTripAccessTest {
     private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class),
             mock(StudentRouteRepository.class), students, mock(StudentRepository.class),
             access, mock(RouteService.class), current,
-            mock(NotificationService.class), mock(TripAlertService.class), mapper,
+            mock(TripAlertService.class), mapper,
             mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
     private Student student;
     private StudentDevice device;

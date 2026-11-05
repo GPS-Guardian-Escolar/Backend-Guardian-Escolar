@@ -10,4 +10,6 @@ public interface CoordinateRepository extends JpaRepository<Coordinate, UUID> {
     List<Coordinate> findByTripIdOrderByRecordedAtAsc(UUID TripId);
 
     List<Coordinate> findTop3ByTripIdOrderByRecordedAtDesc(UUID TripId);
+
+    Coordinate findFirstByTripIdOrderByRecordedAtAsc(UUID tripId);
 }

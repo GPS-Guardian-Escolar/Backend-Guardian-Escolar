@@ -64,11 +64,26 @@ public class TripController {
         return tripService.create(request);
     }
 
+    @Operation(summary = "Iniciar seguimiento antes del movimiento")
+    @PostMapping("/monitoring")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
+    public TripDtos.TripResponse createMonitoring(@Valid @RequestBody TripDtos.TripRequest request) {
+        return tripService.createMonitoring(request);
+    }
+
     @DeleteMapping("/{tripId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
     public void delete(@PathVariable UUID tripId) {
         tripService.delete(tripId);
+    }
+
+    @Operation(summary = "Finalizar trayecto desde la cuenta del acudiente")
+    @PatchMapping("/{tripId}/finish")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    public TripDtos.TripResponse finish(@PathVariable UUID tripId) {
+        return tripService.finish(tripId);
     }
 
     @Operation(summary = "Registrar coordenada del trayecto")
