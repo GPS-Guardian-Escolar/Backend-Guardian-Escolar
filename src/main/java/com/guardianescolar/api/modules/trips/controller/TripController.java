@@ -64,6 +64,14 @@ public class TripController {
         return tripService.create(request);
     }
 
+    @Operation(summary = "Iniciar seguimiento antes del movimiento")
+    @PostMapping("/monitoring")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
+    public TripDtos.TripResponse createMonitoring(@Valid @RequestBody TripDtos.TripRequest request) {
+        return tripService.createMonitoring(request);
+    }
+
     @DeleteMapping("/{tripId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")

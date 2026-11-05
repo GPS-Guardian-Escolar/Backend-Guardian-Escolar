@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TripService {
 
+    private static final double MOVEMENT_START_THRESHOLD_METERS = 40.0;
+
     private final com.guardianescolar.api.modules.students.repository.StudentDeviceRepository studentDeviceRepository;
 
     private final TripRepository tripRepository;
@@ -116,12 +118,54 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
+    @Transactional
+    public TripDtos.TripResponse createMonitoring(TripDtos.TripRequest request) {
+        validateChildStudent(request.studentId());
+        Student student = studentService.getAllowed(request.studentId());
+        validateTripMutation(student);
+        var inProgress = tripRepository.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                student.getId(), TripStatus.IN_PROGRESS);
+        if (inProgress.isPresent()) return tripMapper.toResponse(inProgress.get());
+        var pending = tripRepository.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                student.getId(), TripStatus.PENDING);
+        if (pending.isPresent()) return tripMapper.toResponse(pending.get());
+
+        UUID selectedRouteId = request.routeId() == null
+                ? studentRouteRepository.findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(student.getId())
+                        .map(assignment -> assignment.getRoute())
+                        .filter(candidate -> candidate.getDeletedAt() == null)
+                        .map(Route::getId)
+                        .orElseGet(() -> {
+                            List<com.guardianescolar.api.modules.routes.domain.StudentRoute> assigned = studentRouteRepository.findByIdStudentIdAndIsActiveTrue(student.getId());
+                            List<Route> available = assigned.stream().map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
+                                    .filter(candidate -> candidate.getDeletedAt() == null).toList();
+                            if (available.size() == 1) return available.get(0).getId();
+                            throw new IllegalArgumentException("The guardian must select a route before starting the next trip");
+                        })
+                : request.routeId();
+        Route route = routeService.getAllowed(selectedRouteId);
+        if (!studentRouteRepository.existsByIdStudentIdAndIdRouteIdAndIsActiveTrue(student.getId(), route.getId())) {
+            throw new IllegalArgumentException("The student does not have the requested route assigned");
+        }
+
+        Trip monitoring = new Trip();
+        monitoring.setStudent(student);
+        monitoring.setRoute(route);
+        monitoring.setTripStartedAt(OffsetDateTime.now());
+        monitoring.setStatus(TripStatus.PENDING);
+        monitoring.setHadDeviation(false);
+        return tripMapper.toResponse(tripRepository.save(monitoring));
+    }
+
     @Transactional(readOnly = true)
     public java.util.Optional<TripDtos.TripResponse> activeForStudent(UUID studentId) {
         validateChildStudent(studentId);
         studentService.getAllowed(studentId);
         return tripRepository.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
-                studentId, TripStatus.IN_PROGRESS).map(tripMapper::toResponse);
+                studentId, TripStatus.IN_PROGRESS)
+                .or(() -> tripRepository.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                        studentId, TripStatus.PENDING))
+                .map(tripMapper::toResponse);
     }
 
     @Transactional
@@ -140,7 +184,7 @@ public class TripService {
     public TripDtos.CoordinateResponse registerCoordinate(UUID tripId, TripDtos.CoordinateRequest request) {
         Trip trip = getAllowed(tripId);
         validateTripMutation(trip.getStudent());
-        if (trip.getStatus() != TripStatus.IN_PROGRESS) {
+        if (trip.getStatus() != TripStatus.IN_PROGRESS && trip.getStatus() != TripStatus.PENDING) {
             throw new IllegalArgumentException("Coordinates require an active trip");
         }
         Coordinate coordinate = new Coordinate();
@@ -158,10 +202,42 @@ public class TripService {
         if (previous != null && isImpossibleJump(previous, beforePrevious, coordinate)) {
             return tripMapper.toCoordinateResponse(coordinate);
         }
-        Coordinate saved = coordinateRepository.save(coordinate);
+        Coordinate origin = trip.getStatus() == TripStatus.PENDING
+                ? coordinateRepository.findFirstByTripIdOrderByRecordedAtAsc(tripId)
+                : null;
+        double distanceFromOrigin = origin == null ? 0 : geoMathService.distanceMeters(
+                origin.getLatitude(), origin.getLongitude(), coordinate.getLatitude(), coordinate.getLongitude());
+        double previousDistanceFromOrigin = origin == null || previous == null ? 0 : geoMathService.distanceMeters(
+                origin.getLatitude(), origin.getLongitude(), previous.getLatitude(), previous.getLongitude());
+        Coordinate saved;
+        boolean startsTrip = trip.getStatus() == TripStatus.PENDING && origin != null && previous != null
+                && distanceFromOrigin >= MOVEMENT_START_THRESHOLD_METERS
+                && previousDistanceFromOrigin >= MOVEMENT_START_THRESHOLD_METERS * 0.75
+                && distanceFromOrigin - previousDistanceFromOrigin >= 5.0
+                && geoMathService.distanceMeters(previous.getLatitude(), previous.getLongitude(),
+                        coordinate.getLatitude(), coordinate.getLongitude()) >= 5.0;
+        if (startsTrip) {
+            saved = coordinateRepository.save(coordinate);
+            trip.setStatus(TripStatus.IN_PROGRESS);
+            trip.setTripStartedAt(saved.getRecordedAt());
+            tripRepository.save(trip);
+            notificationService.createForUser(trip, trip.getStudent().getUser(),
+                    NotificationEventTypes.TRIP_STARTED,
+                    "Se iniciÃ³ el trayecto de " + trip.getStudent().getFullName());
+        } else if (trip.getStatus() == TripStatus.PENDING && origin != null && previous != null
+                && !origin.getId().equals(previous.getId())) {
+            // Keep a fixed departure anchor and one fresh point while waiting,
+            // so a stationary phone does not fill the trip history indefinitely.
+            previous.setLatitude(coordinate.getLatitude());
+            previous.setLongitude(coordinate.getLongitude());
+            previous.setRecordedAt(coordinate.getRecordedAt());
+            previous.setStoppedSeconds(coordinate.getStoppedSeconds());
+            saved = coordinateRepository.save(previous);
+        } else {
+            saved = coordinateRepository.save(coordinate);
+        }
         TripDtos.CoordinateResponse response = tripMapper.toCoordinateResponse(saved);
-
-        tripAlertService.processCoordinate(trip, saved);
+        if (trip.getStatus() == TripStatus.IN_PROGRESS) tripAlertService.processCoordinate(trip, saved);
         messagingTemplate.convertAndSend("/topic/trips/" + tripId + "/coordinates", response);
         return response;
     }

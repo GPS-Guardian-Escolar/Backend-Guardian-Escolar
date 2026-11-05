@@ -48,6 +48,7 @@ public class NotificationDeliveryService {
             case NotificationEventTypes.SAFE_ZONE_ENTRY -> "Entrada a zona segura";
             case NotificationEventTypes.SAFE_ZONE_EXIT -> "Salida de zona segura";
             case NotificationEventTypes.TRIP_STARTED -> "Trayecto iniciado";
+            case NotificationEventTypes.DEVICE_LINKED -> "Celular vinculado";
             case NotificationEventTypes.DELAY -> "Retraso del trayecto";
             case NotificationEventTypes.INACTIVITY -> "Inactividad detectada";
             case NotificationEventTypes.LOCATION_UNAVAILABLE -> "Ubicación no disponible";
