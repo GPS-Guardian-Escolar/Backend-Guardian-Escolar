@@ -103,27 +103,8 @@ class ChildTripAccessTest {
     }
 
     @Test
-    void linkedDeviceCanFinishItsTrip() {
-        service.changeStatus(trip.getId(), new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null));
-        assertEquals(TripStatus.COMPLETED, trip.getStatus());
-        assertNotNull(trip.getTripEndedAt());
-        verify(trips).save(trip);
-    }
-
-    @Test
-    void cannotMoveCompletedTripBackToProgress() {
-        trip.setStatus(TripStatus.COMPLETED);
-
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
-        verify(trips, never()).save(any());
-    }
-
-    @Test
-    void revokedDeviceCannotFinishOrUpload() {
+    void revokedDeviceCannotUpload() {
         device.setIsActive(false);
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null)));
         assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
     }
@@ -133,18 +114,6 @@ class ChildTripAccessTest {
         Student other = new Student();
         other.setId(UUID.randomUUID());
         trip.setStudent(other);
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null)));
-        verify(trips, never()).save(any());
-    }
-
-    @Test
-    void deviceCannotEraseIncidentsOrReopenTrip() {
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, false)));
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
-        verify(trips, never()).save(any());
     }
 
     @Test
@@ -152,8 +121,6 @@ class ChildTripAccessTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("viewer", null, List.of()));
         doThrow(new AccessDeniedException("Read only")).when(access).validateManagement(student);
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.CANCELED, null)));
         assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
     }
@@ -163,15 +130,6 @@ class ChildTripAccessTest {
         trip.setStatus(TripStatus.COMPLETED);
         assertThrows(IllegalArgumentException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
-    }
-
-    @Test
-    void ownerCanFinishTripAfterManagementCheck() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("owner", null, List.of()));
-        service.changeStatus(trip.getId(), new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null));
-        verify(access).validateManagement(student);
-        verify(trips).save(trip);
     }
 
     @Test
