@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.guardianescolar.api.modules.auth.dto.AuthDtos;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,7 +25,8 @@ class TwoFactorServiceDeliveryTest {
         EmailService email = mock(EmailService.class);
         AuthValidationService validation = mock(AuthValidationService.class);
         AuthAttemptLimiter limiter = mockLimiter();
-        TwoFactorService service = new TwoFactorService(users, email, validation, limiter);
+        TwoFactorService service = new TwoFactorService(users, email, validation, limiter,
+                new TransientTokenHashService());
         User user = user();
 
         when(validation.normalizeTwoFactorMethod("EMAIL")).thenReturn("EMAIL");
@@ -52,7 +54,8 @@ class TwoFactorServiceDeliveryTest {
             return null;
         }).when(limiter).assertAllowed(anyString(), anyString(), anyInt(), any(Duration.class));
 
-        TwoFactorService service = new TwoFactorService(users, email, validation, limiter);
+        TwoFactorService service = new TwoFactorService(users, email, validation, limiter,
+                new TransientTokenHashService());
         User user = user();
         when(validation.normalizeTwoFactorMethod("EMAIL")).thenReturn("EMAIL");
         when(email.enviarCodeDosFactores(org.mockito.ArgumentMatchers.eq("ana@example.com"), any())).thenReturn(true);

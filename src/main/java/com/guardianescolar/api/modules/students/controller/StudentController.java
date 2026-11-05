@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.students.service.StudentService;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,8 +43,10 @@ public class StudentController {
     @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('STUDENT_READ') or hasRole('ADMIN')")
-    public List<StudentDtos.StudentResponse> list() {
-        return studentService.list();
+    public PageResponse<StudentDtos.StudentResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return studentService.listPage(page, Pagination.size(size));
     }
 
     @Operation(summary = "Crear recurso")
@@ -75,6 +80,13 @@ public class StudentController {
     @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
     public void assignRoute(@PathVariable UUID studentId, @PathVariable UUID routeId) {
         studentService.assignRoute(studentId, routeId);
+    }
+
+    @PutMapping("/{studentId}/preferred-route/{routeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('STUDENT_UPDATE') or hasRole('ADMIN')")
+    public void setPreferredRoute(@PathVariable UUID studentId, @PathVariable UUID routeId) {
+        studentService.setPreferredRoute(studentId, routeId);
     }
 
     @Operation(summary = "Desvincular dispositivo")

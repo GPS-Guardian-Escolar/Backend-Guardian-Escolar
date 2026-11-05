@@ -6,12 +6,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import com.guardianescolar.api.modules.auth.dto.AuthDtos;
 import com.guardianescolar.api.modules.notifications.repository.NotificationSettingsRepository;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +26,7 @@ class AuthProfileAndRecoveryTest {
     private CurrentUserService currentUserService;
     private AuthValidationService validationService;
     private PasswordEncoder passwordEncoder;
+    private TransientTokenHashService transientTokenHashService;
     private AuthService authService;
 
     @BeforeEach
@@ -33,11 +36,14 @@ class AuthProfileAndRecoveryTest {
         currentUserService = mock(CurrentUserService.class);
         validationService = mock(AuthValidationService.class);
         passwordEncoder = mock(PasswordEncoder.class);
+        transientTokenHashService = mock(TransientTokenHashService.class);
+        when(transientTokenHashService.hash(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         authService = new AuthService(userRepository, mock(NotificationSettingsRepository.class),
                 passwordEncoder, mock(JwtService.class), mock(AuthenticationManager.class),
                 emailService, currentUserService, validationService, mock(AuthUserMapper.class),
                 mock(RoleProvisioningService.class), mock(DeviceSessionService.class),
-                mock(TwoFactorService.class), mock(AuthAttemptLimiter.class));
+                mock(TwoFactorService.class), mock(AuthAttemptLimiter.class),
+                transientTokenHashService);
     }
 
     @Test

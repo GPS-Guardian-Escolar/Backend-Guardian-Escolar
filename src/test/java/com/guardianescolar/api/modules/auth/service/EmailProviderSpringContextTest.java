@@ -33,6 +33,7 @@ import com.guardianescolar.api.modules.auth.controller.AuthController;
 import com.guardianescolar.api.modules.notifications.repository.NotificationSettingsRepository;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 
 class EmailProviderSpringContextTest {
 
@@ -106,6 +107,7 @@ class EmailProviderSpringContextTest {
     @Import({
             AuthController.class,
             AuthService.class,
+            TransientTokenHashService.class,
             BrevoEmailSender.class,
             SmtpEmailSender.class,
             EmailService.class,

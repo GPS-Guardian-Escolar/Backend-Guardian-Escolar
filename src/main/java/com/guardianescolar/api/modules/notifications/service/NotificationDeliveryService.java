@@ -50,6 +50,8 @@ public class NotificationDeliveryService {
             case NotificationEventTypes.TRIP_STARTED -> "Trayecto iniciado";
             case NotificationEventTypes.DELAY -> "Retraso del trayecto";
             case NotificationEventTypes.INACTIVITY -> "Inactividad detectada";
+            case NotificationEventTypes.LOCATION_UNAVAILABLE -> "Ubicación no disponible";
+            case NotificationEventTypes.LOCATION_STOPPED -> "Seguimiento detenido";
             default -> "Notificación de Guardian Escolar";
         };
     }

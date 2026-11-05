@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.trips.service.TripService;
 import com.guardianescolar.api.modules.trips.dto.TripDtos;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -14,11 +16,13 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,11 +39,21 @@ public class TripController {
 
     private final TripService tripService;
 
+    @GetMapping("/active")
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
+    public org.springframework.http.ResponseEntity<TripDtos.TripResponse> active(@RequestParam UUID studentId) {
+        return tripService.activeForStudent(studentId)
+                .map(org.springframework.http.ResponseEntity::ok)
+                .orElseGet(() -> org.springframework.http.ResponseEntity.noContent().build());
+    }
+
     @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
-    public List<TripDtos.TripResponse> list() {
-        return tripService.list();
+    public PageResponse<TripDtos.TripResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return tripService.listPage(page, Pagination.size(size));
     }
 
     @Operation(summary = "Crear recurso")
@@ -50,13 +64,11 @@ public class TripController {
         return tripService.create(request);
     }
 
-    @Operation(summary = "Cambiar estado del trayecto")
-    @PatchMapping("/{tripId}/status")
-    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
-    public TripDtos.TripResponse changeStatus(
-            @PathVariable UUID tripId,
-            @Valid @RequestBody TripDtos.ChangeStatusRequest request) {
-        return tripService.changeStatus(tripId, request);
+    @DeleteMapping("/{tripId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
+    public void delete(@PathVariable UUID tripId) {
+        tripService.delete(tripId);
     }
 
     @Operation(summary = "Registrar coordenada del trayecto")
@@ -72,7 +84,10 @@ public class TripController {
     @Operation(summary = "Listar coordenadas del trayecto")
     @GetMapping("/{tripId}/coordinates")
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
-    public List<TripDtos.CoordinateResponse> listCoordinates(@PathVariable UUID tripId) {
-        return tripService.listCoordinates(tripId);
+    public PageResponse<TripDtos.CoordinateResponse> listCoordinates(
+            @PathVariable UUID tripId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return tripService.listCoordinatesPage(tripId, page, Pagination.size(size));
     }
 }

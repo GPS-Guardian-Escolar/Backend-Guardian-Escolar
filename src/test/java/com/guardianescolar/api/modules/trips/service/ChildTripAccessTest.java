@@ -35,10 +35,13 @@ class ChildTripAccessTest {
     private final StudentDeviceRepository devices = mock(StudentDeviceRepository.class);
     private final TripRepository trips = mock(TripRepository.class);
     private final CurrentUserService current = mock(CurrentUserService.class);
+    private final StudentAccessService access = mock(StudentAccessService.class);
+    private final StudentService students = mock(StudentService.class);
+    private final TripMapper mapper = mock(TripMapper.class);
     private final TripService service = new TripService(devices, trips, mock(CoordinateRepository.class),
-            mock(StudentRouteRepository.class), mock(StudentService.class), mock(StudentRepository.class),
-            mock(StudentAccessService.class), mock(RouteService.class), current,
-            mock(NotificationService.class), mock(TripAlertService.class), mock(TripMapper.class),
+            mock(StudentRouteRepository.class), students, mock(StudentRepository.class),
+            access, mock(RouteService.class), current,
+            mock(NotificationService.class), mock(TripAlertService.class), mapper,
             mock(GeoMathService.class), mock(SimpMessagingTemplate.class));
     private Student student;
     private StudentDevice device;
@@ -70,27 +73,38 @@ class ChildTripAccessTest {
     void cleanup() { SecurityContextHolder.clearContext(); }
 
     @Test
-    void linkedDeviceCanFinishItsTrip() {
-        service.changeStatus(trip.getId(), new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null));
-        assertEquals(TripStatus.COMPLETED, trip.getStatus());
-        assertNotNull(trip.getTripEndedAt());
-        verify(trips).save(trip);
-    }
-
-    @Test
-    void cannotMoveCompletedTripBackToProgress() {
-        trip.setStatus(TripStatus.COMPLETED);
-
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
+    void linkedDeviceRecoversActiveTripFromServer() {
+        var response = new TripDtos.TripResponse(trip.getId(), student.getId(), null,
+                null, null, null, null, TripStatus.IN_PROGRESS, false);
+        when(trips.findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(
+                student.getId(), TripStatus.IN_PROGRESS)).thenReturn(Optional.of(trip));
+        when(mapper.toResponse(trip)).thenReturn(response);
+        assertEquals(response, service.activeForStudent(student.getId()).orElseThrow());
+        verify(students).getAllowed(student.getId());
         verify(trips, never()).save(any());
     }
 
     @Test
-    void revokedDeviceCannotFinishOrUpload() {
+    void missingActiveTripReturnsEmpty() {
+        assertTrue(service.activeForStudent(student.getId()).isEmpty());
+    }
+
+    @Test
+    void revokedDeviceCannotRecoverActiveTrip() {
         device.setIsActive(false);
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null)));
+        assertThrows(AccessDeniedException.class, () -> service.activeForStudent(student.getId()));
+        verify(trips, never()).findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void deviceCannotRecoverAnotherStudentsTrip() {
+        assertThrows(AccessDeniedException.class, () -> service.activeForStudent(UUID.randomUUID()));
+        verify(trips, never()).findFirstByStudentIdAndStatusAndDeletedAtIsNullOrderByTripStartedAtDesc(any(), any());
+    }
+
+    @Test
+    void revokedDeviceCannotUpload() {
+        device.setIsActive(false);
         assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
     }
@@ -100,17 +114,35 @@ class ChildTripAccessTest {
         Student other = new Student();
         other.setId(UUID.randomUUID());
         trip.setStudent(other);
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null)));
+    }
+
+    @Test
+    void sharedViewerCannotStopTripOrUploadCoordinates() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("viewer", null, List.of()));
+        doThrow(new AccessDeniedException("Read only")).when(access).validateManagement(student);
+        assertThrows(AccessDeniedException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
     }
 
     @Test
-    void deviceCannotEraseIncidentsOrReopenTrip() {
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, false)));
-        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
-                new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
+    void linkedDeviceCannotUploadToCompletedTrip() {
+        trip.setStatus(TripStatus.COMPLETED);
+        assertThrows(IllegalArgumentException.class, () -> service.registerCoordinate(trip.getId(), null));
         verify(trips, never()).save(any());
+    }
+
+    @Test
+    void ownerCanCancelAndRemoveAnActiveTripFromHistory() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("owner", null, List.of()));
+
+        service.delete(trip.getId());
+
+        assertEquals(TripStatus.CANCELED, trip.getStatus());
+        assertNotNull(trip.getTripEndedAt());
+        assertNotNull(trip.getDeletedAt());
+        verify(access).validateManagement(student);
+        verify(trips).save(trip);
     }
 }

@@ -16,6 +16,7 @@ import com.guardianescolar.api.modules.security.domain.Role;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,7 @@ class AuthServiceRegistrationTest {
     @Mock DeviceSessionService deviceSessionService;
     @Mock TwoFactorService twoFactorService;
     @Mock AuthAttemptLimiter authAttemptLimiter;
+    @Mock TransientTokenHashService transientTokenHashService;
 
     private AuthService authService;
     private AuthDtos.RegisterRequest request;
@@ -61,7 +63,8 @@ class AuthServiceRegistrationTest {
                 roleProvisioningService,
                 deviceSessionService,
                 twoFactorService,
-                authAttemptLimiter);
+                authAttemptLimiter,
+                transientTokenHashService);
         request = new AuthDtos.RegisterRequest(
                 "Nicolas Ruiz",
                 "nicolas@example.com",
