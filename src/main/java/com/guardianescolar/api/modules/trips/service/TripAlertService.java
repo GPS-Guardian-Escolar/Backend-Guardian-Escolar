@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 public class TripAlertService {
 
     private static final int DEFAULT_INACTIVITY_THRESHOLD_SECONDS = 300;
+    private static final double MOVEMENT_START_THRESHOLD_METERS = 40.0;
 
     private final CoordinateRepository coordinateRepository;
     private final TripRepository tripRepository;
@@ -42,6 +43,10 @@ public class TripAlertService {
     private double routeDeviationThresholdMeters;
 
     public void processCoordinate(Trip trip, Coordinate coordinate) {
+        if (trip == null || trip.getStatus() != TripStatus.IN_PROGRESS
+                || !hasConfirmedMovement(trip, coordinate)) {
+            return;
+        }
         detectInactivity(trip, coordinate);
         // A second fix at the destination confirms arrival even if the child
         // has stopped walking. Zone transitions already require two fixes.
@@ -133,6 +138,11 @@ public class TripAlertService {
     }
 
     public void notifyTrackingStopped(Trip trip) {
+        if (trip == null || trip.getStatus() != TripStatus.IN_PROGRESS
+                || !hasConfirmedMovement(trip, coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())
+                        .stream().findFirst().orElse(null))) {
+            return;
+        }
         notifyRecipients(trip, null, NotificationEventTypes.LOCATION_STOPPED,
                 "El seguimiento de " + trip.getStudent().getFullName() + " se detuvo antes de completar el trayecto.");
     }
@@ -152,6 +162,15 @@ public class TripAlertService {
             recipients.putIfAbsent(user.getId(), user);
         }
     }
+
+    private boolean hasConfirmedMovement(Trip trip, Coordinate current) {
+        if (current == null) return false;
+        Coordinate origin = coordinateRepository.findFirstByTripIdOrderByRecordedAtAsc(trip.getId());
+        return origin != null && geoMathService.distanceMeters(
+                origin.getLatitude(), origin.getLongitude(), current.getLatitude(), current.getLongitude())
+                >= MOVEMENT_START_THRESHOLD_METERS;
+    }
+
     private boolean isInsideZone(Coordinate coordinate, SafeZone zone) {
         return geoMathService.isInsideRadius(
                 coordinate.getLatitude(),

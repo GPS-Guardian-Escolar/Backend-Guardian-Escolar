@@ -79,43 +79,9 @@ public class TripService {
 
     @Transactional
     public TripDtos.TripResponse create(TripDtos.TripRequest request) {
-        validateChildStudent(request.studentId());
-        Student student = studentService.getAllowed(request.studentId());
-        validateTripMutation(student);
-        if (tripRepository.existsByStudentIdAndStatusAndDeletedAtIsNull(request.studentId(), TripStatus.IN_PROGRESS)) {
-            throw new IllegalArgumentException("The student already has an active trip");
-        }
-        UUID selectedRouteId = request.routeId() == null
-                ? studentRouteRepository.findFirstByIdStudentIdAndIsActiveTrueAndIsPreferredTrue(student.getId())
-                        .map(assignment -> assignment.getRoute())
-                        .filter(candidate -> candidate.getDeletedAt() == null)
-                        .map(Route::getId)
-                        .orElseGet(() -> {
-                            List<com.guardianescolar.api.modules.routes.domain.StudentRoute> assigned = studentRouteRepository.findByIdStudentIdAndIsActiveTrue(student.getId());
-                            List<Route> available = assigned.stream().map(com.guardianescolar.api.modules.routes.domain.StudentRoute::getRoute)
-                                    .filter(candidate -> candidate.getDeletedAt() == null).toList();
-                            if (available.size() == 1) return available.get(0).getId();
-                            throw new IllegalArgumentException("The guardian must select a route before starting the next trip");
-                        })
-                : request.routeId();
-        Route route = routeService.getAllowed(selectedRouteId);
-        if (!studentRouteRepository.existsByIdStudentIdAndIdRouteIdAndIsActiveTrue(student.getId(), route.getId())) {
-            throw new IllegalArgumentException("The student does not have the requested route assigned");
-        }
-
-        Trip trip = new Trip();
-        trip.setStudent(student);
-        trip.setRoute(route);
-        trip.setTripStartedAt(request.tripStartedAt() == null ? OffsetDateTime.now() : request.tripStartedAt());
-        trip.setStatus(TripStatus.IN_PROGRESS);
-        trip.setHadDeviation(false);
-        Trip saved = tripRepository.save(trip);
-        notificationService.createForUser(
-                saved,
-                student.getUser(),
-                NotificationEventTypes.TRIP_STARTED,
-                "Se inició el trayecto de " + student.getFullName());
-        return tripMapper.toResponse(saved);
+        // Creating a tracking session only arms GPS monitoring. A trip is
+        // started and notified after registerCoordinate confirms real movement.
+        return createMonitoring(request);
     }
 
     @Transactional
