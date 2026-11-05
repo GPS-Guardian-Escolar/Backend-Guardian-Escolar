@@ -64,15 +64,6 @@ public class TripController {
         return tripService.create(request);
     }
 
-    @Operation(summary = "Cambiar estado del trayecto")
-    @PatchMapping("/{tripId}/status")
-    @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasAuthority('CHILD_DEVICE') or hasRole('ADMIN')")
-    public TripDtos.TripResponse changeStatus(
-            @PathVariable UUID tripId,
-            @Valid @RequestBody TripDtos.ChangeStatusRequest request) {
-        return tripService.changeStatus(tripId, request);
-    }
-
     @DeleteMapping("/{tripId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('LOCATION_VIEW') or hasRole('ADMIN')")
