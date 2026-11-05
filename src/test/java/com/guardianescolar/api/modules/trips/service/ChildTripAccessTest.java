@@ -103,11 +103,11 @@ class ChildTripAccessTest {
     }
 
     @Test
-    void linkedDeviceCanFinishItsTrip() {
-        service.changeStatus(trip.getId(), new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null));
-        assertEquals(TripStatus.COMPLETED, trip.getStatus());
-        assertNotNull(trip.getTripEndedAt());
-        verify(trips).save(trip);
+    void linkedDeviceCannotFinishItsTrip() {
+        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
+                new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, null)));
+        assertEquals(TripStatus.IN_PROGRESS, trip.getStatus());
+        verify(trips, never()).save(any());
     }
 
     @Test
@@ -144,6 +144,14 @@ class ChildTripAccessTest {
                 new TripDtos.ChangeStatusRequest(TripStatus.COMPLETED, false)));
         assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
                 new TripDtos.ChangeStatusRequest(TripStatus.IN_PROGRESS, null)));
+        verify(trips, never()).save(any());
+    }
+
+    @Test
+    void linkedDeviceCannotCancelItsTrip() {
+        assertThrows(AccessDeniedException.class, () -> service.changeStatus(trip.getId(),
+                new TripDtos.ChangeStatusRequest(TripStatus.CANCELED, null)));
+        assertEquals(TripStatus.IN_PROGRESS, trip.getStatus());
         verify(trips, never()).save(any());
     }
 

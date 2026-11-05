@@ -133,12 +133,7 @@ public class TripService {
         }
         if (SecurityContextHolder.getContext().getAuthentication().getDetails()
                 instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails) {
-            if (request.status() != TripStatus.COMPLETED && request.status() != TripStatus.CANCELED) {
-                throw new AccessDeniedException("A device may only finish or cancel its own trip");
-            }
-            if (request.hadDeviation() != null) {
-                throw new AccessDeniedException("A device cannot modify recorded incidents");
-            }
+            throw new AccessDeniedException("Only the guardian may change a trip status");
         }
         boolean trackingStopped = trip.getStatus() == TripStatus.IN_PROGRESS && request.status() == TripStatus.CANCELED;
         trip.setStatus(request.status());
