@@ -87,6 +87,8 @@ public class ExpoPushService {
     private String title(String eventType) {
         return switch (eventType) {
             case NotificationEventTypes.INACTIVITY -> "Inactivity alert";
+            case NotificationEventTypes.LOCATION_UNAVAILABLE -> "Ubicación no disponible";
+            case NotificationEventTypes.LOCATION_STOPPED -> "Seguimiento detenido";
             case NotificationEventTypes.ROUTE_DEVIATION -> "Route deviation alert";
             case NotificationEventTypes.SAFE_ZONE_ENTRY -> "Safe zone arrival";
             case NotificationEventTypes.SAFE_ZONE_EXIT -> "Safe zone departure";

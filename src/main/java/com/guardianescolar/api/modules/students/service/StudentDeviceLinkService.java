@@ -13,6 +13,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -25,17 +28,26 @@ public class StudentDeviceLinkService {
     private final StudentLinkCodeService studentLinkCodeService;
     private final JwtService jwtService;
 
+    @Transactional
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
         Student student = request.studentId() == null
-                ? findStudentByCode(request.code())
+                ? studentLinkCodeService.resolveStudent(request.code())
                 : findStudent(request.studentId());
-        if (!studentLinkCodeService.matches(student.getId(), request.code())) {
-            throw new IllegalArgumentException("Invalid link code");
-        }
 
         OffsetDateTime now = OffsetDateTime.now();
         String deviceIdentifier = request.deviceIdentifier().trim();
+        StudentDevice existingDevice = studentDeviceRepository.findByDeviceIdentifier(deviceIdentifier).orElse(null);
+        if (isSameLinkedDevice(existingDevice, student)) {
+            studentLinkCodeService.verifyConsumedForSameDevice(student, request.code());
+            existingDevice.setLastUsedAt(now);
+            StudentDevice saved = studentDeviceRepository.save(existingDevice);
+            String childToken = jwtService.generateChildToken(
+                    student.getUser(), student.getId(), saved.getDeviceIdentifier());
+            return studentMapper.toDeviceResponse(saved, childToken);
+        }
+
         StudentDevice device = resolveLinkableDevice(student, deviceIdentifier);
+        studentLinkCodeService.consume(student, request.code());
         device.setStudent(student);
         device.setDeviceIdentifier(deviceIdentifier);
         device.setPlatform(request.platform());
@@ -52,23 +64,56 @@ public class StudentDeviceLinkService {
         return studentMapper.toDeviceResponse(saved, childToken);
     }
 
+    private boolean isSameLinkedDevice(StudentDevice device, Student student) {
+        return device != null
+                && device.getStudent() != null
+                && student.getId().equals(device.getStudent().getId())
+                && Boolean.TRUE.equals(device.getIsActive())
+                && device.getDeletedAt() == null;
+    }
+
     public StudentDtos.LinkedProfileResponse linkedProfile(java.util.UUID studentId, String code) {
         Student student = findStudent(studentId);
-        if (!studentLinkCodeService.matches(student.getId(), code)) {
-            throw new IllegalArgumentException("Invalid link code");
-        }
+        studentLinkCodeService.verify(student, code);
 
         EmergencyContact contact = primaryContact(studentId);
         return new StudentDtos.LinkedProfileResponse(
                 student.getId(),
-                studentLinkCodeService.codeFor(student.getId()),
+                code,
                 student.getFullName(),
                 student.getSchoolGrade(),
                 student.getBirthDate(),
                 contact == null ? "" : contact.getFullName(),
                 contact == null ? "" : contact.getPhone(),
                 contact == null ? "" : contact.getRelationship(),
-                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId));
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(studentId),
+                studentMapper.preferredRouteId(studentId));
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDtos.LinkedProfileResponse childProfile() {
+        Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
+        if (!(details instanceof com.guardianescolar.api.shared.security.ChildDeviceAuthenticationDetails child)) {
+            throw new AccessDeniedException("Child device authentication required");
+        }
+
+        StudentDevice device = studentDeviceRepository.findByDeviceIdentifier(child.deviceIdentifier())
+                .filter(item -> Boolean.TRUE.equals(item.getIsActive()) && item.getDeletedAt() == null)
+                .filter(item -> item.getStudent() != null && child.studentId().equals(item.getStudent().getId()))
+                .orElseThrow(() -> new AccessDeniedException("The device is no longer linked"));
+        Student student = device.getStudent();
+        EmergencyContact contact = primaryContact(student.getId());
+        return new StudentDtos.LinkedProfileResponse(
+                student.getId(),
+                "",
+                student.getFullName(),
+                student.getSchoolGrade(),
+                student.getBirthDate(),
+                contact == null ? "" : contact.getFullName(),
+                contact == null ? "" : contact.getPhone(),
+                contact == null ? "" : contact.getRelationship(),
+                studentDeviceRepository.countByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId()),
+                studentMapper.preferredRouteId(student.getId()));
     }
 
     private StudentDevice resolveLinkableDevice(Student student, String deviceIdentifier) {
@@ -104,19 +149,12 @@ public class StudentDeviceLinkService {
                 .orElseGet(() -> contacts.stream().findFirst().orElse(null));
     }
 
+
     private Student findStudent(java.util.UUID studentId) {
         return studentRepository.findByIdAndDeletedAtIsNull(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
-
-    private Student findStudentByCode(String code) {
-        return studentRepository.findByDeletedAtIsNullOrderByFullNameAsc().stream()
-                .filter(candidate -> studentLinkCodeService.matches(candidate.getId(), code))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found for link code"));
-    }
-
-    private String normalizeOptionalText(String value) {
+private String normalizeOptionalText(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }

@@ -3,6 +3,7 @@ package com.guardianescolar.api.modules.auth.service;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,9 @@ public class EmailLinkService {
 
     @Value("${guardian.mail.frontend-base-url:http://localhost:8081}")
     private String frontendBaseUrl;
+
+    @Value("${guardian.mail.allowed-origins:${guardian.mail.frontend-base-url:http://localhost:8081}}")
+    private String allowedOrigins;
 
     public String emailVerificationUrl(String token, String returnUrl) {
         return frontendOriginFromReturnUrl(returnUrl) + "/verify-email?token=" + token + returnUrlParam(returnUrl);
@@ -44,7 +48,8 @@ public class EmailLinkService {
             if (uri.getScheme() == null || uri.getHost() == null) {
                 return frontendBaseUrl;
             }
-            return uri.getScheme() + "://" + uri.getAuthority();
+            String origin = uri.getScheme() + "://" + uri.getAuthority();
+            return isAllowedOrigin(origin) ? origin : frontendBaseUrl;
         } catch (IllegalArgumentException error) {
             return frontendBaseUrl;
         }
@@ -59,10 +64,20 @@ public class EmailLinkService {
         }
         try {
             URI uri = URI.create(returnUrl);
-            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
-                    && uri.getHost() != null;
+            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    || uri.getHost() == null) {
+                return false;
+            }
+            return isAllowedOrigin(uri.getScheme() + "://" + uri.getAuthority());
         } catch (IllegalArgumentException error) {
             return false;
         }
+    }
+
+    private boolean isAllowedOrigin(String origin) {
+        return Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .anyMatch(value -> value.equalsIgnoreCase(origin));
     }
 }

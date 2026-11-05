@@ -16,6 +16,7 @@ import com.guardianescolar.api.modules.security.domain.Role;
 import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.security.repository.UserRepository;
 import com.guardianescolar.api.shared.security.JwtService;
+import com.guardianescolar.api.shared.security.TransientTokenHashService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,8 @@ class AuthServiceRegistrationTest {
     @Mock RoleProvisioningService roleProvisioningService;
     @Mock DeviceSessionService deviceSessionService;
     @Mock TwoFactorService twoFactorService;
+    @Mock AuthAttemptLimiter authAttemptLimiter;
+    @Mock TransientTokenHashService transientTokenHashService;
 
     private AuthService authService;
     private AuthDtos.RegisterRequest request;
@@ -59,7 +62,9 @@ class AuthServiceRegistrationTest {
                 userMapper,
                 roleProvisioningService,
                 deviceSessionService,
-                twoFactorService);
+                twoFactorService,
+                authAttemptLimiter,
+                transientTokenHashService);
         request = new AuthDtos.RegisterRequest(
                 "Nicolas Ruiz",
                 "nicolas@example.com",
@@ -74,6 +79,7 @@ class AuthServiceRegistrationTest {
         when(userRepository.existsByEmailIgnoreCase(request.email())).thenReturn(false);
         when(passwordEncoder.encode(request.password())).thenReturn("encoded-password");
         when(roleProvisioningService.parentRole()).thenReturn(parentRole);
+        when(emailService.isAvailable()).thenReturn(true);
     }
 
     @Test
@@ -118,4 +124,5 @@ class AuthServiceRegistrationTest {
         verify(emailService, never()).enviarVerificacionEmail(any(), any(), any());
         verify(notificationSettingsRepository, never()).save(any());
     }
+
 }

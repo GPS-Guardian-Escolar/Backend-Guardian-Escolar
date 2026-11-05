@@ -28,7 +28,6 @@ public class TripMapper {
                 coordinate.getLatitude(),
                 coordinate.getLongitude(),
                 coordinate.getRecordedAt(),
-                coordinate.getSpeedKmh(),
                 coordinate.getStoppedSeconds());
     }
 }

@@ -11,6 +11,7 @@ class EmailLinkServiceTest {
     void buildsVerificationLinkFromTrustedReturnUrlOrigin() {
         EmailLinkService service = new EmailLinkService();
         ReflectionTestUtils.setField(service, "frontendBaseUrl", "https://frontend.example.com");
+        ReflectionTestUtils.setField(service, "allowedOrigins", "https://app.example.com");
 
         String link = service.emailVerificationUrl("verification-token", "https://app.example.com/login");
 
@@ -23,6 +24,7 @@ class EmailLinkServiceTest {
     void fallsBackToConfiguredFrontendForInvalidReturnUrl() {
         EmailLinkService service = new EmailLinkService();
         ReflectionTestUtils.setField(service, "frontendBaseUrl", "https://frontend.example.com");
+        ReflectionTestUtils.setField(service, "allowedOrigins", "https://frontend.example.com");
 
         assertEquals(
                 "https://frontend.example.com/verify-email?token=verification-token",

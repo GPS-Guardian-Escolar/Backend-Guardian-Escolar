@@ -1,0 +1,50 @@
+package com.guardianescolar.api.modules.trips.service;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.guardianescolar.api.modules.notifications.service.NotificationService;
+import com.guardianescolar.api.modules.routes.repository.StopRepository;
+import com.guardianescolar.api.modules.students.domain.Student;
+import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
+import com.guardianescolar.api.modules.trips.domain.Coordinate;
+import com.guardianescolar.api.modules.trips.domain.Trip;
+import com.guardianescolar.api.modules.trips.repository.CoordinateRepository;
+import com.guardianescolar.api.modules.trips.repository.TripRepository;
+import com.guardianescolar.api.modules.zones.repository.SafeZoneRepository;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class TripAlertServiceTest {
+
+    @Test
+    void ignoresRouteAndZoneAlertsForAStationaryHeartbeat() {
+        CoordinateRepository coordinates = mock(CoordinateRepository.class);
+        TripRepository trips = mock(TripRepository.class);
+        SafeZoneRepository zones = mock(SafeZoneRepository.class);
+        StopRepository stops = mock(StopRepository.class);
+        StudentGuardianRepository guardians = mock(StudentGuardianRepository.class);
+        NotificationService notifications = mock(NotificationService.class);
+        GeoMathService geoMath = mock(GeoMathService.class);
+        Student student = new Student();
+        student.setId(UUID.randomUUID());
+        Trip trip = new Trip();
+        trip.setStudent(student);
+        Coordinate heartbeat = new Coordinate();
+        heartbeat.setStoppedSeconds(30);
+        when(zones.findByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId())).thenReturn(List.of());
+
+        TripAlertService service = new TripAlertService(
+                coordinates, trips, zones, stops, guardians, notifications, geoMath);
+
+        service.processCoordinate(trip, heartbeat);
+
+        verify(coordinates, never()).findTop3ByTripIdOrderByRecordedAtDesc(trip.getId());
+        verify(trips, never()).save(trip);
+        verifyNoInteractions(notifications);
+    }
+}

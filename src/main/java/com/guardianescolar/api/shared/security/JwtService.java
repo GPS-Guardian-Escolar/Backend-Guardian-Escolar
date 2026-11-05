@@ -23,14 +23,14 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    private final String secret;
     private final long expirationMinutes;
+    private final Key signingKey;
 
     public JwtService(
             @Value("${guardian.security.jwt.secret}") String secret,
             @Value("${guardian.security.jwt.expiration-minutes}") long expirationMinutes) {
-        this.secret = secret;
         this.expirationMinutes = expirationMinutes;
+        this.signingKey = buildSigningKey(secret);
     }
 
     public String generateToken(User user) {
@@ -103,20 +103,28 @@ public class JwtService {
     }
 
     private Key signingKey() {
+        return signingKey;
+    }
+
+    private static Key buildSigningKey(String configuredSecret) {
+        if (configuredSecret == null || configuredSecret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET debe estar configurado");
+        }
+
         byte[] keyBytes;
         try {
-            keyBytes = Decoders.BASE64.decode(secret);
+            keyBytes = Decoders.BASE64.decode(configuredSecret);
         } catch (RuntimeException exception) {
-            keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+            keyBytes = configuredSecret.getBytes(StandardCharsets.UTF_8);
         }
 
         if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
-            for (int i = keyBytes.length; i < padded.length; i++) {
-                padded[i] = (byte) 'x';
+            byte[] rawBytes = configuredSecret.getBytes(StandardCharsets.UTF_8);
+            if (rawBytes.length >= 32) {
+                keyBytes = rawBytes;
+            } else {
+                throw new IllegalStateException("JWT_SECRET debe tener al menos 32 bytes");
             }
-            keyBytes = padded;
         }
 
         return Keys.hmacShaKeyFor(keyBytes);

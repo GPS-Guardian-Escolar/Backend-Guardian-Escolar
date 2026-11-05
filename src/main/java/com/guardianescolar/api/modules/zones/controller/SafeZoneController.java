@@ -1,9 +1,13 @@
 package com.guardianescolar.api.modules.zones.controller;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
 
 import lombok.RequiredArgsConstructor;
 
 import com.guardianescolar.api.modules.zones.service.SafeZoneService;
 import com.guardianescolar.api.modules.zones.dto.SafeZoneDtos;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -22,16 +26,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/safe-zones")
 @RequiredArgsConstructor
+@Tag(name = "Safe zones", description = "Safe-zone configuration and alerts")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Solicitud inválida o parámetros no válidos"),
+    @ApiResponse(responseCode = "401", description = "Se requiere autenticación"),
+    @ApiResponse(responseCode = "403", description = "Acceso denegado")
+})
 public class SafeZoneController {
 
     private final SafeZoneService safeZoneService;
 
+    @Operation(summary = "Listar recursos")
     @GetMapping
     @PreAuthorize("hasAuthority('SAFE_ZONE_READ') or hasRole('ADMIN')")
     public List<SafeZoneDtos.SafeZoneResponse> list() {
         return safeZoneService.list();
     }
 
+    @Operation(summary = "Crear recurso")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('SAFE_ZONE_CREATE') or hasRole('ADMIN')")
@@ -39,6 +51,7 @@ public class SafeZoneController {
         return safeZoneService.create(request);
     }
 
+    @Operation(summary = "Actualizar recurso")
     @PutMapping("/{zoneId}")
     @PreAuthorize("hasAuthority('SAFE_ZONE_UPDATE') or hasRole('ADMIN')")
     public SafeZoneDtos.SafeZoneResponse update(
@@ -47,6 +60,7 @@ public class SafeZoneController {
         return safeZoneService.update(zoneId, request);
     }
 
+    @Operation(summary = "Eliminar recurso")
     @DeleteMapping("/{zoneId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SAFE_ZONE_DELETE') or hasRole('ADMIN')")

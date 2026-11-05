@@ -4,6 +4,7 @@ import com.guardianescolar.api.modules.auth.service.CurrentUserService;
 import com.guardianescolar.api.modules.notifications.domain.Notification;
 import com.guardianescolar.api.modules.notifications.domain.NotificationReceipt;
 import com.guardianescolar.api.modules.notifications.domain.NotificationSettings;
+import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
 import com.guardianescolar.api.modules.notifications.dto.NotificationDtos;
 import com.guardianescolar.api.modules.notifications.repository.NotificationReceiptRepository;
 import com.guardianescolar.api.modules.notifications.repository.NotificationRepository;
@@ -12,8 +13,12 @@ import com.guardianescolar.api.modules.security.domain.User;
 import com.guardianescolar.api.modules.trips.domain.Trip;
 import com.guardianescolar.api.modules.zones.domain.SafeZone;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
+import com.guardianescolar.api.shared.Pagination;
+import com.guardianescolar.api.shared.dto.PageResponse;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +27,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private static final int INACTIVITY_DEDUPLICATION_MINUTES = 5;
     private final NotificationRepository notificationRepository;
     private final NotificationReceiptRepository notificationReceiptRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
     private final CurrentUserService currentUserService;
     private final NotificationDeliveryService notificationDeliveryService;
     private final NotificationMapper notificationMapper;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<NotificationDtos.NotificationResponse> listForCurrentUser() {
@@ -38,6 +45,11 @@ public class NotificationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<NotificationDtos.NotificationResponse> listPage(int page, int size) {
+        return Pagination.slice(listForCurrentUser(), page, size);
+    }
+
     @Transactional
     public NotificationDtos.NotificationResponse markAsRead(UUID receiptId) {
         User current = currentUserService.currentUser();
@@ -45,6 +57,25 @@ public class NotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
         receipt.markAsRead();
         return notificationMapper.toResponse(notificationReceiptRepository.save(receipt));
+    }
+
+    @Transactional
+    public void deleteForCurrentUser(UUID receiptId) {
+        User current = currentUserService.currentUser();
+        NotificationReceipt receipt = notificationReceiptRepository
+                .findByIdAndUserEmailIgnoreCase(receiptId, current.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        notificationReceiptRepository.delete(receipt);
+    }
+
+    @Transactional
+    public int markAllAsRead() {
+        User current = currentUserService.currentUser();
+        List<NotificationReceipt> receipts =
+                notificationReceiptRepository.findByUserEmailIgnoreCaseAndWasReadFalse(current.getEmail());
+        receipts.forEach(NotificationReceipt::markAsRead);
+        notificationReceiptRepository.saveAll(receipts);
+        return receipts.size();
     }
 
     @Transactional
@@ -64,7 +95,6 @@ public class NotificationService {
         settings.setInactivityAlert(newOrCurrent(request.inactivityAlert(), settings.getInactivityAlert()));
         settings.setPushChannel(newOrCurrent(request.pushChannel(), settings.getPushChannel()));
         settings.setEmailChannel(newOrCurrent(request.emailChannel(), settings.getEmailChannel()));
-        settings.setSmsChannel(newOrCurrent(request.smsChannel(), settings.getSmsChannel()));
         return settingsResponse(notificationSettingsRepository.save(settings));
     }
 
@@ -80,6 +110,14 @@ public class NotificationService {
             User user,
             String eventType,
             String message) {
+        if (NotificationEventTypes.INACTIVITY.equals(eventType)) {
+            lockInactivityDeduplication(trip.getId(), eventType, user.getId());
+            if (notificationRepository.existsRecentNotificationForUser(
+                    trip.getId(), eventType,
+                    OffsetDateTime.now().minusMinutes(INACTIVITY_DEDUPLICATION_MINUTES), user.getId())) {
+                return;
+            }
+        }
         Notification notification = saveNotification(trip, safeZone, eventType, message);
         saveReceipt(notification, user);
 
@@ -88,6 +126,21 @@ public class NotificationService {
             notification.setWasSent(true);
             notificationRepository.save(notification);
         }
+    }
+
+    @Transactional
+    public void createForUserOnceSince(Trip trip, User user, String eventType, String message, OffsetDateTime since) {
+        lockInactivityDeduplication(trip.getId(), eventType, user.getId());
+        if (!notificationRepository.existsRecentNotificationForUser(trip.getId(), eventType, since, user.getId())) {
+            createForUser(trip, user, eventType, message);
+        }
+    }
+
+    private void lockInactivityDeduplication(UUID tripId, String eventType, UUID userId) {
+        entityManager.createNativeQuery(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(:deduplicationKey, 0))")
+                .setParameter("deduplicationKey", "notification:" + tripId + ":" + eventType + ":" + userId)
+                .getSingleResult();
     }
 
     private Notification saveNotification(Trip trip, SafeZone safeZone, String eventType, String message) {
@@ -117,7 +170,7 @@ public class NotificationService {
     }
 
     private NotificationDtos.NotificationSettingsResponse settingsResponse(NotificationSettings settings) {
-        return notificationMapper.toSettingsResponse(settings, notificationDeliveryService.smsAvailable());
+        return notificationMapper.toSettingsResponse(settings);
     }
 
     private Boolean newOrCurrent(Boolean newValue, Boolean currentValue) {

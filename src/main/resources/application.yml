@@ -39,7 +39,7 @@ guardian:
   security:
     require-https: ${REQUIRE_HTTPS:false}
     jwt:
-      secret: ${JWT_SECRET:replace-me-in-local-env}
+      secret: ${JWT_SECRET}
       expiration-minutes: ${JWT_EXPIRATION_MINUTES:30}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:19006,http://localhost:8081,http://localhost:5173}
@@ -49,21 +49,16 @@ guardian:
     from: ${APP_MAIL_FROM:no-reply@guardianescolar.local}
     from-name: ${APP_MAIL_FROM_NAME:}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:8081}
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:${FRONTEND_BASE_URL:http://localhost:8081}}
     brevo:
       api-key: ${BREVO_API_KEY:}
       api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
   gps:
-    route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:150}
+    route-deviation-threshold-meters: ${GPS_ROUTE_DEVIATION_THRESHOLD_METERS:${GPS_DESVIO_UMBRAL_METROS:150}}
   push:
     expo:
       enabled: ${EXPO_PUSH_ENABLED:false}
       url: ${EXPO_PUSH_URL:https://exp.host/--/api/v2/push/send}
-  sms:
-    enabled: ${SMS_ENABLED:false}
-    provider: ${SMS_PROVIDER:GENERIC}
-    provider-url: ${SMS_PROVIDER_URL:}
-    api-key: ${SMS_API_KEY:}
-    from: ${SMS_FROM:GuardianEscolar}
 
 google:
   maps:
