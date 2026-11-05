@@ -3,14 +3,21 @@ package com.guardianescolar.api.modules.students.service;
 import com.guardianescolar.api.modules.students.domain.EmergencyContact;
 import com.guardianescolar.api.modules.students.domain.Student;
 import com.guardianescolar.api.modules.students.domain.StudentDevice;
+import com.guardianescolar.api.modules.students.domain.StudentGuardian;
 import com.guardianescolar.api.modules.students.dto.StudentDtos;
+import com.guardianescolar.api.modules.notifications.domain.NotificationEventTypes;
+import com.guardianescolar.api.modules.notifications.service.NotificationService;
 import com.guardianescolar.api.modules.students.repository.EmergencyContactRepository;
 import com.guardianescolar.api.modules.students.repository.StudentDeviceRepository;
 import com.guardianescolar.api.modules.students.repository.StudentRepository;
+import com.guardianescolar.api.modules.students.repository.StudentGuardianRepository;
 import com.guardianescolar.api.shared.exception.ResourceNotFoundException;
 import com.guardianescolar.api.shared.security.JwtService;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +34,8 @@ public class StudentDeviceLinkService {
     private final StudentMapper studentMapper;
     private final StudentLinkCodeService studentLinkCodeService;
     private final JwtService jwtService;
+    private final StudentGuardianRepository studentGuardianRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public StudentDtos.StudentDeviceResponse linkDevice(StudentDtos.LinkDeviceRequest request) {
@@ -61,7 +70,25 @@ public class StudentDeviceLinkService {
         StudentDevice saved = studentDeviceRepository.save(device);
         String childToken = jwtService.generateChildToken(
                 student.getUser(), student.getId(), saved.getDeviceIdentifier());
+        notifyGuardiansOfLinkedDevice(student);
         return studentMapper.toDeviceResponse(saved, childToken);
+    }
+
+    private void notifyGuardiansOfLinkedDevice(Student student) {
+        Map<UUID, com.guardianescolar.api.modules.security.domain.User> recipients = new LinkedHashMap<>();
+        if (student.getUser() != null && student.getUser().getId() != null) {
+            recipients.put(student.getUser().getId(), student.getUser());
+        }
+        List<StudentGuardian> guardians = studentGuardianRepository
+                .findByStudentIdAndStatusAndDeletedAtIsNull(student.getId(), "ACTIVE");
+        guardians.stream().map(StudentGuardian::getUser)
+                .filter(user -> user != null && user.getId() != null)
+                .forEach(user -> recipients.putIfAbsent(user.getId(), user));
+        String message = "El celular de " + student.getFullName()
+                + " quedó vinculado. La ubicación actual se compartirá automáticamente; el trayecto iniciará al detectar movimiento."
+                + " Permite el acceso a la ubicación si el teléfono lo solicita y verifica que tenga una ruta asignada.";
+        recipients.values().forEach(user -> notificationService.createForUser(
+                null, user, NotificationEventTypes.DEVICE_LINKED, message));
     }
 
     private boolean isSameLinkedDevice(StudentDevice device, Student student) {

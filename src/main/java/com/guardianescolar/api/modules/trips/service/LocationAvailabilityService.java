@@ -21,10 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class LocationAvailabilityService {
+    private static final double MOVEMENT_START_THRESHOLD_METERS = 40.0;
+
     private final TripRepository tripRepository;
     private final CoordinateRepository coordinateRepository;
     private final StudentGuardianRepository guardianRepository;
     private final NotificationService notificationService;
+    private final GeoMathService geoMathService;
 
     @Value("${guardian.gps.location-stale-seconds:120}")
     private long staleSeconds;
@@ -34,8 +37,14 @@ public class LocationAvailabilityService {
     public void checkActiveTrips() {
         OffsetDateTime now = OffsetDateTime.now();
         for (Trip trip : tripRepository.findByStatusAndDeletedAtIsNull(TripStatus.IN_PROGRESS)) {
-            OffsetDateTime lastLocation = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())
-                    .stream().findFirst().map(coordinate -> coordinate.getRecordedAt()).orElse(trip.getTripStartedAt());
+            if (trip.getStatus() != TripStatus.IN_PROGRESS) continue;
+            var lastCoordinate = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())
+                    .stream().findFirst().orElse(null);
+            var origin = coordinateRepository.findFirstByTripIdOrderByRecordedAtAsc(trip.getId());
+            if (lastCoordinate == null || origin == null || geoMathService.distanceMeters(
+                    origin.getLatitude(), origin.getLongitude(), lastCoordinate.getLatitude(), lastCoordinate.getLongitude())
+                    < MOVEMENT_START_THRESHOLD_METERS) continue;
+            OffsetDateTime lastLocation = lastCoordinate.getRecordedAt();
             if (lastLocation == null || lastLocation.isAfter(now.minusSeconds(staleSeconds))) continue;
 
             Map<UUID, User> recipients = new LinkedHashMap<>();
