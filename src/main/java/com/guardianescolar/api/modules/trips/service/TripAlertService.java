@@ -43,13 +43,15 @@ public class TripAlertService {
 
     public void processCoordinate(Trip trip, Coordinate coordinate) {
         detectInactivity(trip, coordinate);
+        // A second fix at the destination confirms arrival even if the child
+        // has stopped walking. Zone transitions already require two fixes.
+        detectSafeZones(trip, coordinate);
         // A stationary heartbeat proves that the phone is still connected.
-        // It is not evidence of a route or safe-zone transition, because GPS
+        // It is not evidence of a route deviation, because GPS
         // drift while standing still can otherwise create false alerts.
         if (coordinate.getStoppedSeconds() != null && coordinate.getStoppedSeconds() > 0) {
             return;
         }
-        detectSafeZones(trip, coordinate);
         detectRouteDeviation(trip, coordinate);
     }
 

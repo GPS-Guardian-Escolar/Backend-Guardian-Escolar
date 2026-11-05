@@ -152,6 +152,9 @@ public class TripService {
         List<Coordinate> recentCoordinates = coordinateRepository.findTop3ByTripIdOrderByRecordedAtDesc(tripId);
         Coordinate previous = recentCoordinates.stream().findFirst().orElse(null);
         Coordinate beforePrevious = recentCoordinates.size() > 1 ? recentCoordinates.get(1) : null;
+        if (previous != null && !coordinate.getRecordedAt().isAfter(previous.getRecordedAt())) {
+            return tripMapper.toCoordinateResponse(previous);
+        }
         if (previous != null && isImpossibleJump(previous, beforePrevious, coordinate)) {
             return tripMapper.toCoordinateResponse(coordinate);
         }

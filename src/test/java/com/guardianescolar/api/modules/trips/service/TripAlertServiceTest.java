@@ -47,4 +47,37 @@ class TripAlertServiceTest {
         verify(trips, never()).save(trip);
         verifyNoInteractions(notifications);
     }
+
+    @Test
+    void stationaryFixConfirmsArrivalAfterEnteringTheZone() {
+        CoordinateRepository coordinates = mock(CoordinateRepository.class);
+        TripRepository trips = mock(TripRepository.class);
+        SafeZoneRepository zones = mock(SafeZoneRepository.class);
+        NotificationService notifications = mock(NotificationService.class);
+        GeoMathService geo = mock(GeoMathService.class);
+        Student student = new Student();
+        student.setId(UUID.randomUUID());
+        var owner = new com.guardianescolar.api.modules.security.domain.User();
+        owner.setId(UUID.randomUUID());
+        student.setUser(owner);
+        Trip trip = new Trip(); trip.setId(UUID.randomUUID()); trip.setStudent(student);
+        var zone = new com.guardianescolar.api.modules.zones.domain.SafeZone();
+        zone.setId(UUID.randomUUID()); zone.setZoneName("School"); zone.setInactivityAlertSeconds(300);
+        zone.setLatitude(java.math.BigDecimal.ZERO); zone.setLongitude(java.math.BigDecimal.ZERO); zone.setRadiusMeters(100);
+        Coordinate outside = new Coordinate(); outside.setId(UUID.randomUUID());
+        outside.setLatitude(java.math.BigDecimal.ONE); outside.setLongitude(java.math.BigDecimal.ZERO);
+        Coordinate entry = new Coordinate(); entry.setId(UUID.randomUUID());
+        entry.setLatitude(java.math.BigDecimal.ZERO); entry.setLongitude(java.math.BigDecimal.ZERO);
+        Coordinate stopped = new Coordinate(); stopped.setId(UUID.randomUUID());
+        stopped.setLatitude(java.math.BigDecimal.ZERO); stopped.setLongitude(java.math.BigDecimal.ZERO); stopped.setStoppedSeconds(30);
+        when(zones.findByStudentIdAndIsActiveTrueAndDeletedAtIsNull(student.getId())).thenReturn(List.of(zone));
+        when(coordinates.findTop3ByTripIdOrderByRecordedAtDesc(trip.getId())).thenReturn(List.of(stopped, entry, outside));
+        when(geo.isInsideRadius(java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, 100)).thenReturn(true);
+        var service = new TripAlertService(coordinates, trips, zones, mock(StopRepository.class),
+                mock(StudentGuardianRepository.class), notifications, geo);
+        service.processCoordinate(trip, stopped);
+        verify(notifications).createForUser(org.mockito.ArgumentMatchers.eq(trip), org.mockito.ArgumentMatchers.eq(zone),
+                org.mockito.ArgumentMatchers.eq(owner), org.mockito.ArgumentMatchers.eq("SAFE_ZONE_ENTRY"), org.mockito.ArgumentMatchers.anyString());
+    }
 }
